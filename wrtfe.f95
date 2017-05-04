@@ -1,71 +1,103 @@
-module useful
-
+module universal
         contains
 
-subroutine finder(collection,word,res)! result(res)
-        implicit none
-        character(len=80), dimension(1000), intent(in) :: collection
-        character(len=80), intent(in) :: word
-        character(len=80), dimension(1000), intent(out) :: res
+        subroutine finder(collection,word,res)
+                implicit none
+                character(len=80), dimension(1000), intent(in) :: collection
+                character(len=80), intent(in) :: word
+                character(len=80), dimension(1000), intent(out) :: res
+                
+                integer :: l
+                integer :: indexofword
+                do l=1,1000
         
-        integer :: l
-        integer :: indexofword
-        do l=1,1000
+                        indexofword = index(collection(l), trim(word))
+                        if (indexofword > 0) then
+                                res(l) = collection(l)
+                        else
+                                res(l) = ""
+                        end if
+                end do
+        end subroutine
+end module universal
+module terminal
+        ! terminal-based REPL IO
+        use universal
+        contains
 
-                indexofword = index(collection(l), trim(word))
-                if (indexofword > 0) then
-                        res(l) = collection(l)
-                else
-                        res(l) = ""
-                end if
-        end do
+        subroutine repl(dictsteno,dictentry)
+                
+                implicit none
+                character(len=80), dimension(1000), intent(inout) :: dictsteno
+                character(len=80), dimension(1000), intent(inout) :: dictentry
 
-        call printer(res)
-end subroutine
+                character(len=80) :: command
+                character(len=80) :: arguments
+                character(len=80), dimension(1000) :: swapspace
+                
+                command = ""
+                arguments = ""
 
-subroutine printer(collection)
-        implicit none
-        character(len=80), dimension(1000), intent(in) :: collection
-        integer :: l
-        integer :: indexofword
-        do l=1,1000
+                print *, "Welcome to the command REPL, type help for command list."
+                print *, "NO CHANGES WILL BE SAVED UNTIL YOU QUIT."
 
-                indexofword = len(trim(collection(l)))
-                if (indexofword < 80 .and. indexofword > 0) then
-                        print *, collection(l), indexofword
-                end if
-        end do
-end subroutine
+                do while (.true.)
+                        command = ""
+                        arguments = ""
+                        read (*,'(a)') command
+                        if (index(command,"finds") > 0 .and. index(command,"finds") < 2) then
+                                arguments = command(7:80)
+                                !print *, command
+                                call finder(dictsteno,arguments,swapspace)
+                                call printer(swapspace,dictentry)
+                        else if (index(command,"findt") > 0 .and. index(command,"findt") < 2) then
+                                arguments = command(7:80)
+                                call finder(dictentry,arguments,swapspace)
+                                call printer(dictsteno,swapspace)
+                        else if (index(command,"quit") > 0) then
+                                exit
+                        else if (index(command,"help") > 0) then
+                                print *, "Command list:"
+                                print *, "finds [string] - Finds [string] in the steno array."
+                                print *, "findt [string] - Finds [string] in the translation array."
+                                print *, "quit - Saves RTF/CRE file, then exits."
+                        else
+                                print *, "Command not found, try help."
+                        end if
+                end do
+        end subroutine repl
 
-end module useful
+        subroutine printer(steno,trans)
+                implicit none
+                character(len=80), dimension(1000), intent(in) :: steno
+                character(len=80), dimension(1000), intent(in) :: trans
+                
+                integer :: l
+                integer :: indexofsteno
+                integer :: indexoftrans
+                logical :: stenoexists
+                logical :: transexists
+                do l=1,1000
+                        indexofsteno = len(trim(steno(l)))
+                        indexoftrans = len(trim(trans(l)))
+                        stenoexists = (indexofsteno < 80 .and. indexofsteno > 0)
+                        transexists = (indexoftrans < 80 .and. indexoftrans > 0)
+                        if (stenoexists .and. transexists) then
+                                print *, l, trim(steno(l)), " -> ", trim(trans(l))
+                        end if
+                end do
+        end subroutine
 
-function add(a,b) result(c)
-        integer :: a
-        integer :: b
-        integer :: c
-
-        c = a + b
-end function
+end module terminal
 
 program waffleRTFEditor
-        use useful
+        use universal
+        use terminal
         implicit none
 
         !---------------------------------------------------------------------------------------------------------------------------
-        !! Interfaces
-        
-
-        !interface
-        !        subroutine finder(collection, word, res)
-        !                character(len=80), dimension(1000), intent(in) :: collection
-        !                character(len=80), intent(in) :: word
-        !                character(len=80), dimension(1000), intent(out) :: res
-        !        end subroutine finder
-        !end interface
-
-
+        ! Definition
         !---------------------------------------------------------------------------------------------------------------------------
-        !! Definition
 
         integer :: i, j, k ! loop var.
 
@@ -77,9 +109,6 @@ program waffleRTFEditor
         character(len=80), dimension(1000) :: dictionarycontent ! Fortran arrays start at 1.
         character(len=80), dimension(1000) :: dictentry
         character(len=80), dimension(1000) :: dictsteno
-        
-        character(len=80), dimension(1000) :: finderresults ! Related interface one.
-        character(len=80) :: findersearchterm
 
         integer :: numberoflines
 
@@ -93,7 +122,8 @@ program waffleRTFEditor
         integer :: lengthofsteno
 
         !---------------------------------------------------------------------------------------------------------------------------
-        !! Initialization
+        ! Initialization
+        !---------------------------------------------------------------------------------------------------------------------------
 
         i = 0
         j = 0
@@ -107,9 +137,6 @@ program waffleRTFEditor
         ! dictionarycontent cannot be initialized effectively.
         ! dictentry
         ! dictsteno
-
-        ! finderresults
-        findersearchterm = ""
 
         numberoflines = 0
 
@@ -185,19 +212,11 @@ program waffleRTFEditor
         !---------------------------------------------------------------------------------------------------------------------------
         ! Execution - Manipulation.
         !---------------------------------------------------------------------------------------------------------------------------
-        print *, "Provide search term"
-        do while (.true.)
-                findersearchterm = ""
-                read(*,*) findersearchterm
-                if (trim(findersearchterm) ==  "QUIT") then
-                        exit
-                end if
+        
+        call repl(dictsteno,dictentry)
 
-                call finder(dictsteno,findersearchterm, finderresults)
-                !print *, finderresults(1)
-                
-        end do
-
+        ! Time to save the file:
+        
         stop
         
         !---------------------------------------------------------------------------------------------------------------------------
