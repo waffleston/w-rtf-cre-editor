@@ -1,5 +1,8 @@
+! (c) 2017 Brendyn Sonntag
+! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
 module universal
+        ! This module has the core subroutines, independent of terminal REPL interface.
         contains
 
         subroutine finder(collection,word,res)
@@ -50,7 +53,7 @@ module universal
         end subroutine saver
 end module universal
 module terminal
-        ! terminal-based REPL IO
+        ! REPL IO, subroutines should be terminal specific - TUI, GUI implementations in another module.
         use universal
         contains
 
@@ -263,7 +266,6 @@ program waffleRTFEditor
 
         do k=1,300000
                 read(1,'(a)',iostat = iostaterror) dictionarycontent(k)
-                ! print *, trim(dictionarycontent(k)), " - SUBSTR ", index(dictionarycontent(k),"}")
                 ! We need to be aware that not all entries in the array are usefull, and some have garbage in them.
                 if (iostaterror > 0) then
                         numberoflines = k
@@ -271,7 +273,6 @@ program waffleRTFEditor
                 end if
         end do
         
-        ! 2 to avoid line one, which has random RTF metadata.
         do k=1,300000
                 isentry = (index(dictionarycontent(k),"{\*\cxs ") == 1)
                 if (isentry .and. index(dictionarycontent(k),"}") > 6) then
@@ -286,28 +287,16 @@ program waffleRTFEditor
         ! Execution - Manipulation.
         !---------------------------------------------------------------------------------------------------------------------------
         
+        ! REPL loop, exiting the subroutine means quit has been called.
         call repl(dictsteno,dictentry,numberoflines, dictionaryfile)
 
-        ! Time to save the file:
-        ! call printer(dictionarycontent,dictionarycontent)
-        ! call singleprint(dictionarycontent)
+        ! Save the file:
         close (1)
         open(1, file=dictionaryfile, iostat = iostaterror, status="replace")
-        call saver(dictsteno,dictentry)
-        close (1)
-        stop
-        
-        !---------------------------------------------------------------------------------------------------------------------------
-        ! MISC TUI stuff - Ignored.
-        !---------------------------------------------------------------------------------------------------------------------------
 
-        !print *, esc//"[2J", tuiTopLeft ! Blank screen, move cur to top, move cur to left
-       ! print *, esc//"[1A", esc//"[30;42m", esc//"[2D", headertext ,esc//"[0m" ! Move cur up one, Set to black on green, move cur 2
-        ! to left, ..., reset styles.
-        !print *, ""
-!        do while (i < 320) 
-!                eighty = trim(eighty) // "h"
-!                i = i + 1
-!        end do
-        !print *, introduction
+        call saver(dictsteno,dictentry)
+
+        close (1)
+
+        stop
 end program waffleRTFEditor
