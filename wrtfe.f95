@@ -23,9 +23,10 @@ module universal
                         end if
                 end do
         end subroutine
-        subroutine saver(dictsteno,dictentry)
+        subroutine saver(dictsteno,dictentry,filenum)
                 character(len=320), dimension(300000), intent(in) :: dictsteno
                 character(len=320), dimension(300000), intent(in) :: dictentry
+                integer, intent(in) :: filenum
 
                 integer :: l
                 integer :: indexofsteno
@@ -35,7 +36,7 @@ module universal
 
                 character(len=320) :: ds
                 character(len=320) :: de
-                write (1,'(a)') "{\rtf1\ansi{\*\cxrev100}\cxdict{\*\cxsystem WRTFE}{\stylesheet{\s0 Normal;}}"
+                write (filenum,'(a)') "{\rtf1\ansi{\*\cxrev100}\cxdict{\*\cxsystem WRTFE}{\stylesheet{\s0 Normal;}}"
 
                 do l=1,300000
                         indexofsteno = len(trim(dictsteno(l)))
@@ -45,11 +46,11 @@ module universal
                         ds = dictsteno(l)
                         de = dictentry(l)
                         if (stenoexists .and. transexists) then
-                                write (1,'(a)') '{\*\cxs '//trim(ds)//'}'//trim(de)
+                                write (filenum,'(a)') '{\*\cxs '//trim(ds)//'}'//trim(de)
                         end if
                 end do
 
-                write (1,'(a)') "}"
+                write (filenum,'(a)') "}"
         end subroutine saver
 end module universal
 module terminal
@@ -57,13 +58,14 @@ module terminal
         use universal
         contains
 
-        subroutine repl(dictsteno,dictentry,numberoflines,filename)
+        subroutine repl(dictsteno,dictentry,numberoflines,filename,ploverfix)
                 
                 implicit none
                 character(len=320), dimension(300000), intent(inout) :: dictsteno
                 character(len=320), dimension(300000), intent(inout) :: dictentry
                 integer, intent(inout) :: numberoflines
                 character(len=32), intent(in) :: filename
+                logical, intent(inout) :: ploverfix
 
                 character(len=320) :: command
                 character(len=320) :: arguments
@@ -119,6 +121,9 @@ module terminal
                                 print *, "del [NUMBER] - Deletes the entry from both arrays."
                                 print *, "add [STENO] [String] - Adds the entry (No spaces in steno)."
                                 print *, "quit - Saves RTF/CRE file, then exits."
+                                print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
+                        else if (index(command,"plover") > 0) then
+                                ploverfix = .true.
                         else
                                 print *, "Command not found, try help."
                         end if
@@ -194,6 +199,8 @@ program waffleRTFEditor
         integer :: lengthofentry
         integer :: lengthofsteno
 
+        logical :: ploverfix
+
         !---------------------------------------------------------------------------------------------------------------------------
         ! Initialization
         !---------------------------------------------------------------------------------------------------------------------------
@@ -224,6 +231,8 @@ program waffleRTFEditor
         lengthofentry = 0
         lengthofsteno = 0
 
+        ploverfix = .false.
+
         !---------------------------------------------------------------------------------------------------------------------------
         ! Execution - Arguments and Validation
         !---------------------------------------------------------------------------------------------------------------------------
@@ -242,7 +251,7 @@ program waffleRTFEditor
                         print *, "Version 1.0"
                         stop
                 case ('-h', '--help', '-help', '--h')
-                        print *, "Usage: ./TUI [filename.rtf]"
+                        print *, "Usage: ./wrtfe [filename.rtf]"
                         stop
                 case default
                         dictionaryfile = trim(arg) ! Dictionary filename acquired, proceed.
@@ -288,15 +297,32 @@ program waffleRTFEditor
         !---------------------------------------------------------------------------------------------------------------------------
         
         ! REPL loop, exiting the subroutine means quit has been called.
-        call repl(dictsteno,dictentry,numberoflines, dictionaryfile)
+        call repl(dictsteno,dictentry,numberoflines, dictionaryfile,ploverfix)
 
         ! Save the file:
         close (1)
         open(1, file=dictionaryfile, iostat = iostaterror, status="replace")
 
-        call saver(dictsteno,dictentry)
-
+        call saver(dictsteno,dictentry,1)
+        
         close (1)
+
+        !---------------------------------------------------------------------------------------------------------------------------
+        ! Execution - Other dictionary outputs
+        !---------------------------------------------------------------------------------------------------------------------------
+        ! Plover /line converter
+        if (ploverfix) then
+                open(2, file=trim(dictionaryfile)//".plover.rtf", iostat = iostaterror, status="replace")
+                do k=1,300000
+                        if (index(dictentry(k),"\line") == 1) then
+                                dictentry(k) = "{^"//achar(10)//"^}{-|}"
+                        end if
+                end do
+
+                call saver(dictsteno,dictentry,2)
+
+                close (2)
+        end if
 
         stop
 end program waffleRTFEditor
