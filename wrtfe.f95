@@ -54,7 +54,7 @@ module universal
         end subroutine saver
 end module universal
 module terminal
-        ! REPL IO, subroutines should be terminal specific - TUI, GUI implementations in another module.
+        ! REPL IO & CLI access, subroutines should be terminal specific - TUI, GUI implementations in another module.
         use universal
         contains
 
@@ -179,6 +179,35 @@ module terminal
                 end do
         end subroutine singleprint
 
+        subroutine all_arguments(cmd,filename)
+                character(len=320), intent(out) :: cmd
+                character(len=320), intent(in) :: filename
+
+                character(len=320) :: arguments
+                character(len=320) :: two
+                character(len=320) :: three
+                character(len=320) :: four
+
+                integer :: afterfile
+                integer :: lenfile
+                integer :: swapspace
+
+                arguments = ""
+
+                afterfile = 0
+                lenfile = 0
+                swapspace = 0
+
+                call get_command(cmd)
+                
+                afterfile = index(cmd,trim(filename))
+                lenfile = len(trim(filename))
+
+                arguments = cmd(afterfile+lenfile+1:320)
+
+                cmd = arguments
+                end subroutine all_arguments
+
 end module terminal
 
 program waffleRTFEditor
@@ -192,8 +221,8 @@ program waffleRTFEditor
 
         integer :: i, j, k ! loop var.
 
-        character (len=32) :: dictionaryfile ! The filename of the dictionary.
-        character(len=32) :: arg
+        character (len=320) :: dictionaryfile ! The filename of the dictionary.
+        character(len=320) :: arg
         logical :: dictpresent
         integer :: iostaterror
         
@@ -258,7 +287,7 @@ program waffleRTFEditor
                 stop
         end if
 
-        do j = 1, command_argument_count()
+        do j = 1,1
                 call get_command_argument(j, arg)
 
                 select case(trim(arg))
@@ -268,13 +297,17 @@ program waffleRTFEditor
                 case ('-h', '--help', '-help', '--h')
                         print *, "Usage: ./wrtfe [filename.rtf]"
                         stop
-                case ('act')
-                        print *, trim(arg)
-                        call get_command_argument(2, arg)
-                        print *, trim(arg)
-                        stop
                 case default
                         dictionaryfile = trim(arg) ! Dictionary filename acquired, proceed.
+                        if (index(dictionaryfile,".rtf") > 0) then
+                                dictionaryfile = dictionaryfile(1:index(dictionaryfile,".rtf")+4)
+                        else if (index(dictionaryfile,".RTF") > 0) then
+                                dictionaryfile = dictionaryfile(1:index(dictionaryfile,".RTF")+4)
+                        else
+                                print *, trim(dictionaryfile)
+                                print *, "[file extension] Your file does not appear to be an rtf/cre dictionary."
+                                stop
+                        end if
                 end select
 
                 inquire (file=dictionaryfile, exist=dictpresent)
@@ -316,8 +349,19 @@ program waffleRTFEditor
         ! Execution - Manipulation.
         !---------------------------------------------------------------------------------------------------------------------------
         
-        ! REPL loop, exiting the subroutine means quit has been called.
-        call repl(dictsteno,dictentry,numberoflines,ploverfix)
+        
+       
+
+        call all_arguments(arg,dictionaryfile)
+        ! Get all text after the filename.
+
+        if (len(trim(arg)) > 0) then
+                !print *, arg
+                call perform(dictsteno,dictentry,numberoflines,ploverfix,arg)
+        else
+                ! REPL loop, exiting the subroutine means quit has been called.
+                call repl(dictsteno,dictentry,numberoflines,ploverfix)
+        end if
 
         ! Save the file:
         close (1)
