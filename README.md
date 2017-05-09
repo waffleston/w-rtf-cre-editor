@@ -6,7 +6,7 @@ It's a lightweight RTF/CRE dictionary editor, aiming to be as easy to use as pos
 ## Todo:
 * [x] Terminal
   * [x] REPL dictionary editing.
-  * [ ] CLI arguments to edit dictionary without REPL.
+  * [X] CLI arguments to edit dictionary without REPL.
 * [x] Dictionary Editing
   * [x] Search
   * [x] Add
