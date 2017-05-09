@@ -58,16 +58,43 @@ module terminal
         use universal
         contains
 
-        subroutine repl(dictsteno,dictentry,numberoflines,filename,ploverfix)
+        subroutine repl(dictsteno,dictentry,numberoflines,ploverfix)
                 
                 implicit none
                 character(len=320), dimension(300000), intent(inout) :: dictsteno
                 character(len=320), dimension(300000), intent(inout) :: dictentry
                 integer, intent(inout) :: numberoflines
-                character(len=32), intent(in) :: filename
                 logical, intent(inout) :: ploverfix
 
                 character(len=320) :: command
+                
+                command = ""
+
+                print *, "Welcome to the command REPL, type help for command list."
+                print *, "All metadata will be lost/replaced."
+                print *, "NO CHANGES WILL BE SAVED UNTIL YOU QUIT."
+
+                do while (.true.)
+                        command = ""
+                        read (*,'(a)') command
+                        if (index(command,"quit") == 1) then
+                                exit
+                        else
+                                call perform(dictsteno,dictentry,numberoflines,ploverfix,command)
+                        end if
+                end do
+        end subroutine repl
+
+        subroutine perform(dictsteno,dictentry,numberoflines,ploverfix,command)
+                
+                implicit none
+                character(len=320), dimension(300000), intent(inout) :: dictsteno
+                character(len=320), dimension(300000), intent(inout) :: dictentry
+                integer, intent(inout) :: numberoflines
+                logical, intent(inout) :: ploverfix
+
+                character(len=320), intent(inout) :: command
+
                 character(len=320) :: arguments
                 character(len=320), dimension(300000) :: swapspace
 
@@ -76,59 +103,47 @@ module terminal
                 character(len=320) :: asteno
                 character(len=320) :: atrans
                 
-                command = ""
                 arguments = ""
                 dswap = 0
 
-                print *, "Welcome to the command REPL, type help for command list."
-                print *, "All metadata will be lost/replaced."
-                print *, "NO CHANGES WILL BE SAVED UNTIL YOU QUIT."
-
-                do while (.true.)
-                        command = ""
-                        arguments = ""
-                        read (*,'(a)') command
-                        if (index(command,"finds") == 1) then
-                                arguments = command(7:320)
-                                !print *, command
-                                call finder(dictsteno,arguments,swapspace)
-                                call printer(swapspace,dictentry)
-                        else if (index(command,"findt") == 1) then
-                                arguments = command(7:320)
-                                call finder(dictentry,arguments,swapspace)
-                                call printer(dictsteno,swapspace)
-                        else if (index(command,"del") == 1) then
-                                arguments = command(5:320)
-                                read(arguments,*) dswap
-                                print *, "Deleting entry ", dswap, ": ", trim(dictsteno(dswap)), " ", trim(dictentry(dswap))
-                                dictsteno(dswap) = ""
-                                dictentry(dswap) = ""
-                        else if (index(command,"add") == 1) then
-                                arguments = command(5:320)
-                                asteno = arguments(1:index(arguments," ")-1)
-                                atrans = arguments(index(arguments," ")+1:320)
-                                numberoflines = numberoflines + 1
-                                dictsteno(numberoflines) = asteno
-                                dictentry(numberoflines) = atrans
-                                print *, "Added entry", numberoflines, ":", trim(dictsteno(numberoflines)), " ",&
-                                &trim(dictentry(numberoflines))
-                        else if (index(command,"quit") > 0) then
-                                exit
-                        else if (index(command,"help") > 0) then
-                                print *, "Command list:"
-                                print *, "finds [string] - Finds [string] in the steno array."
-                                print *, "findt [string] - Finds [string] in the translation array."
-                                print *, "del [NUMBER] - Deletes the entry from both arrays."
-                                print *, "add [STENO] [String] - Adds the entry (No spaces in steno)."
-                                print *, "quit - Saves RTF/CRE file, then exits."
-                                print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
-                        else if (index(command,"plover") > 0) then
-                                ploverfix = .true.
-                        else
-                                print *, "Command not found, try help."
-                        end if
-                end do
-        end subroutine repl
+                if (index(command,"finds") == 1) then
+                        arguments = command(7:320)
+                        !print *, command
+                        call finder(dictsteno,arguments,swapspace)
+                        call printer(swapspace,dictentry)
+                else if (index(command,"findt") == 1) then
+                        arguments = command(7:320)
+                        call finder(dictentry,arguments,swapspace)
+                        call printer(dictsteno,swapspace)
+                else if (index(command,"del") == 1) then
+                        arguments = command(5:320)
+                        read(arguments,*) dswap
+                        print *, "Deleting entry ", dswap, ": ", trim(dictsteno(dswap)), " ", trim(dictentry(dswap))
+                        dictsteno(dswap) = ""
+                        dictentry(dswap) = ""
+                else if (index(command,"add") == 1) then
+                        arguments = command(5:320)
+                        asteno = arguments(1:index(arguments," ")-1)
+                        atrans = arguments(index(arguments," ")+1:320)
+                        numberoflines = numberoflines + 1
+                        dictsteno(numberoflines) = asteno
+                        dictentry(numberoflines) = atrans
+                        print *, "Added entry", numberoflines, ":", trim(dictsteno(numberoflines)), " ",&
+                        &trim(dictentry(numberoflines))
+                else if (index(command,"help") > 0) then
+                        print *, "Command list:"
+                        print *, "finds [string] - Finds [string] in the steno array."
+                        print *, "findt [string] - Finds [string] in the translation array."
+                        print *, "del [NUMBER] - Deletes the entry from both arrays."
+                        print *, "add [STENO] [String] - Adds the entry (No spaces in steno)."
+                        print *, "quit - Saves RTF/CRE file, then exits."
+                        print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
+                else if (index(command,"plover") > 0) then
+                        ploverfix = .true.
+                else
+                        print *, "Command not found, try help."
+                end if
+        end subroutine perform
 
         subroutine printer(steno,trans)
                 implicit none
@@ -253,6 +268,11 @@ program waffleRTFEditor
                 case ('-h', '--help', '-help', '--h')
                         print *, "Usage: ./wrtfe [filename.rtf]"
                         stop
+                case ('act')
+                        print *, trim(arg)
+                        call get_command_argument(2, arg)
+                        print *, trim(arg)
+                        stop
                 case default
                         dictionaryfile = trim(arg) ! Dictionary filename acquired, proceed.
                 end select
@@ -297,7 +317,7 @@ program waffleRTFEditor
         !---------------------------------------------------------------------------------------------------------------------------
         
         ! REPL loop, exiting the subroutine means quit has been called.
-        call repl(dictsteno,dictentry,numberoflines, dictionaryfile,ploverfix)
+        call repl(dictsteno,dictentry,numberoflines,ploverfix)
 
         ! Save the file:
         close (1)
