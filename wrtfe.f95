@@ -129,13 +129,29 @@ module terminal
                         dictsteno(numberoflines) = asteno
                         dictentry(numberoflines) = atrans
                         print *, "Added entry", numberoflines, ":", trim(dictsteno(numberoflines)), " ",&
-                        &trim(dictentry(numberoflines))
+                                &trim(dictentry(numberoflines))
+                else if (index(command,"fixs") == 1) then
+                        arguments = command(6:32)
+                        asteno = arguments(index(arguments," ")+1:320)
+                        read(arguments(1:index(arguments," ")-1),*) dswap
+                        print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)), "] with [",&
+                                &trim(asteno), " ", trim(dictentry(dswap)), "]"
+                        dictsteno(dswap) = asteno
+                else if (index(command,"fixt") == 1) then
+                        arguments = command(6:32)
+                        atrans = arguments(index(arguments," ")+1:320)
+                        read(arguments(1:index(arguments," ")-1),*) dswap
+                        print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)), "] with [",&
+                                &trim(dictsteno(dswap)), " ", trim(atrans), "]"
+                        dictentry(dswap) = atrans
                 else if (index(command,"help") > 0) then
                         print *, "Command list:"
                         print *, "finds [string] - Finds [string] in the steno array."
                         print *, "findt [string] - Finds [string] in the translation array."
                         print *, "del [NUMBER] - Deletes the entry from both arrays."
                         print *, "add [STENO] [String] - Adds the entry (No spaces in steno)."
+                        print *, "fixs [NUMBER] [STENO] - Replaces the given enrty's steno."
+                        print *, "fixt [Number] [String] - Replaces the given entry's translation."
                         print *, "quit - Saves RTF/CRE file, then exits."
                         print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
                 else if (index(command,"plover") > 0) then
