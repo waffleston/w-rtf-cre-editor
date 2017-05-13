@@ -13,7 +13,9 @@ It's a lightweight RTF/CRE dictionary editor, aiming to be as easy to use as pos
   * [x] Delete
   * [X] Replace
   * [ ] Global search/&replace
-  * [ ] Duplicate entry resolver
+  * [x] Duplicate entry resolver
+    * [x] Find duplicate entries
+    * [ ] Automatic double duplicate remover
   * [ ] Maintain metadata
   * [ ] Write metadata
 * [ ] Create backup dictionary.
