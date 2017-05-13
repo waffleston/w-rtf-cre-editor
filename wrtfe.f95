@@ -52,6 +52,8 @@ module universal
 
                 write (filenum,'(a)') "}"
         end subroutine saver
+        
+
 end module universal
 module terminal
         ! REPL IO & CLI access, subroutines should be terminal specific - TUI, GUI implementations in another module.
@@ -144,6 +146,8 @@ module terminal
                         print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)), "] with [",&
                                 &trim(dictsteno(dswap)), " ", trim(atrans), "]"
                         dictentry(dswap) = atrans
+                else if (index(command,"test") == 1) then
+                        call find_duplicates(dictsteno,dictentry)
                 else if (index(command,"help") > 0) then
                         print *, "Command list:"
                         print *, "finds [string] - Finds [string] in the steno array."
@@ -152,6 +156,7 @@ module terminal
                         print *, "add [STENO] [String] - Adds the entry (No spaces in steno)."
                         print *, "fixs [NUMBER] [STENO] - Replaces the given enrty's steno."
                         print *, "fixt [Number] [String] - Replaces the given entry's translation."
+                        print *, "test - Alerts you to any duplicate entries in the dictionary."
                         print *, "quit - Saves RTF/CRE file, then exits."
                         print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
                 else if (index(command,"plover") > 0) then
@@ -222,7 +227,65 @@ module terminal
                 arguments = cmd(afterfile+lenfile+1:320)
 
                 cmd = arguments
-                end subroutine all_arguments
+        end subroutine all_arguments
+        subroutine find_duplicates(dictsteno, dicttrans)
+                character(len=320), dimension(300000), intent(in) :: dictsteno
+                character(len=320), dimension(300000), intent(in) :: dicttrans
+
+                ! Temporary array, delete entry from it when duplicate detected.
+                character(len=320), dimension(300000) :: tempsteno
+                character(len=320), dimension(300000) :: temptrans
+                
+                integer :: dentry
+                integer :: dtest
+
+                integer :: nsteno
+                integer :: ntrans
+
+                character(len=320) :: csteno
+                character(len=320) :: ctrans
+
+                tempsteno = dictsteno
+                temptrans = dicttrans
+
+                nsteno = 0
+                ntrans = 1
+
+                do dentry=1,len(dictsteno)-1
+                        csteno = tempsteno(dentry)
+                        ctrans = temptrans(dentry)
+
+                        if (len(trim(csteno)) > 0 .and. len(trim(csteno)) < 320 .and. len(trim(ctrans)) >0&
+                                &.and. len(trim(ctrans)) < 320) then
+
+                                ntrans = 0
+                                nsteno = 0
+
+                                do dtest = dentry+1,len(dictsteno)
+                                        if (trim(csteno) == trim(tempsteno(dtest))) then
+                                                print *, " entry ", dtest
+                                                tempsteno(dtest) = ""
+                                                nsteno = nsteno + 1
+                                        end if
+                                end do
+                                if (nsteno > 0) then
+                                        print *, "Share steno: ''", trim(csteno), "'' with ", dentry
+                                        nsteno = 0
+                                end if
+                                do dtest = dentry+1,len(dicttrans)
+                                        if (trim(ctrans) == trim(temptrans(dtest))) then
+                                                print *, " entry ", dtest
+                                                temptrans(dtest) = ""
+                                                ntrans = ntrans + 1
+                                        end if
+                                end do
+                                if (ntrans > 0) then
+                                        print *, "Share translation ''", trim(ctrans), "'' with ", dentry
+                                        ntrans = 0
+                                end if
+                        end if
+                end do
+        end subroutine find_duplicates
 
 end module terminal
 
@@ -406,3 +469,5 @@ program waffleRTFEditor
 
         stop
 end program waffleRTFEditor
+
+
