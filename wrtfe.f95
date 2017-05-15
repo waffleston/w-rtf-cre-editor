@@ -229,8 +229,8 @@ module terminal
                 cmd = arguments
         end subroutine all_arguments
         subroutine find_duplicates(dictsteno, dicttrans)
-                character(len=320), dimension(300000), intent(in) :: dictsteno
-                character(len=320), dimension(300000), intent(in) :: dicttrans
+                character(len=320), dimension(300000), intent(inout) :: dictsteno
+                character(len=320), dimension(300000), intent(inout) :: dicttrans
 
                 ! Temporary array, delete entry from it when duplicate detected.
                 character(len=320), dimension(300000) :: tempsteno
@@ -245,6 +245,13 @@ module terminal
                 character(len=320) :: csteno
                 character(len=320) :: ctrans
 
+                character(len=320) :: osteno
+                character(len=320) :: otrans
+
+                character(len=7) :: tempchar
+
+                integer :: iostator
+
                 tempsteno = dictsteno
                 temptrans = dicttrans
 
@@ -255,32 +262,52 @@ module terminal
                         csteno = tempsteno(dentry)
                         ctrans = temptrans(dentry)
 
+                        !rewind osteno
+                        !rewind otrans
+
+                        osteno = ""
+                        otrans = ""
+
                         if (len(trim(csteno)) > 0 .and. len(trim(csteno)) < 320 .and. len(trim(ctrans)) >0&
                                 &.and. len(trim(ctrans)) < 320) then
 
                                 ntrans = 0
                                 nsteno = 0
 
+                                
+
                                 do dtest = dentry+1,len(dictsteno)
-                                        if (trim(csteno) == trim(tempsteno(dtest))) then
-                                                print *, " entry ", dtest
+                                        tempchar = ""
+                                        !read(dtest,*) tempchar
+                                        !read(dtest,'(a)',iostat = iostator) tempchar
+                                        write(tempchar, "(I7)") dtest
+
+                                        if (trim(csteno) == trim(tempsteno(dtest)) .and. trim(ctrans) ==&
+                                                &trim(temptrans(dtest))) then
+                                                print *, "Duplicate entry detected:"
+                                                print *, dentry, " ", trim(csteno), " ", trim(ctrans)
+                                                print *, dtest, " ", trim(tempsteno(dtest)), " ", trim(temptrans(dtest))
+                                                dictsteno(dtest) = ""
+                                                dicttrans(dtest) = ""
+                                                print *, "Second entry deleted."
+                                        else if (trim(csteno) == trim(tempsteno(dtest))) then
+                                                osteno = trim(osteno)//trim(tempchar)//", "
                                                 tempsteno(dtest) = ""
                                                 nsteno = nsteno + 1
-                                        end if
-                                end do
-                                if (nsteno > 0) then
-                                        print *, "Share steno: ''", trim(csteno), "'' with ", dentry
-                                        nsteno = 0
-                                end if
-                                do dtest = dentry+1,len(dicttrans)
-                                        if (trim(ctrans) == trim(temptrans(dtest))) then
-                                                print *, " entry ", dtest
+                                        else if (trim(ctrans) == trim(temptrans(dtest))) then
+                                                otrans = trim(otrans)//trim(tempchar)//", "
                                                 temptrans(dtest) = ""
                                                 ntrans = ntrans + 1
                                         end if
                                 end do
+                                if (nsteno > 0) then
+                                        print *, "Entries ", trim(osteno), " based from ", dentry
+                                        print *, "Share steno ''", trim(csteno), "''"
+                                        nsteno = 0
+                                end if
                                 if (ntrans > 0) then
-                                        print *, "Share translation ''", trim(ctrans), "'' with ", dentry
+                                        print *, "Entries ", trim(otrans), " based from ", dentry
+                                        print *, "share translation ''", trim(ctrans), "''"
                                         ntrans = 0
                                 end if
                         end if
