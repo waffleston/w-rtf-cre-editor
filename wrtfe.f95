@@ -52,7 +52,31 @@ module universal
 
                 write (filenum,'(a)') "}"
         end subroutine saver
-        
+        subroutine steno_validation(steno,error)
+                character(len=320),intent(in) :: steno
+                character(len=320),intent(out) :: error
+
+                character(len=20) :: swp
+                
+                integer :: k ! Looping
+
+                error = ""
+
+                do k=1,255
+                        if (index(steno,achar(k)) > 0) then
+                                if (k > 90 .or. (k < 65 .and. (k /= 32 .and. k /= 35 .and. k /= 42 .and. k /= 45 .and. k /= 47)))&
+                                        &then
+                                        write (swp,*) k
+                                        error = trim(error)//"The character "//achar(k)//" ("//trim(adjustl(swp))//") at position: "
+                                        swp = ""
+                                        write (swp,*) index(steno,achar(k))
+                                        error = trim(error)//trim(adjustl(swp))//" might not be valid in steno."//achar(10)
+                                end if
+                        end if
+                end do
+
+                
+        end subroutine steno_validation
 
 end module universal
 module terminal
@@ -75,10 +99,12 @@ module terminal
                 print *, "Welcome to the command REPL, type help for command list."
                 print *, "All metadata will be lost/replaced."
                 print *, "NO CHANGES WILL BE SAVED UNTIL YOU QUIT."
+                
 
                 do while (.true.)
                         command = ""
                         read (*,'(a)') command
+
                         if (index(command,"quit") == 1) then
                                 exit
                         else
@@ -101,6 +127,7 @@ module terminal
                 character(len=320), dimension(300000) :: swapspace
 
                 integer :: dswap
+                character(len=320) :: char_swp
 
                 character(len=320) :: asteno
                 character(len=320) :: atrans
@@ -130,8 +157,11 @@ module terminal
                         numberoflines = numberoflines + 1
                         dictsteno(numberoflines) = asteno
                         dictentry(numberoflines) = atrans
+                        call steno_validation(asteno,char_swp)
+                        
                         print *, "Added entry", numberoflines, ":", trim(dictsteno(numberoflines)), " ",&
                                 &trim(dictentry(numberoflines))
+                        print *, trim(char_swp) !Error log for validation.
                 else if (index(command,"fixs") == 1) then
                         arguments = command(6:32)
                         asteno = arguments(index(arguments," ")+1:320)
