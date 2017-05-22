@@ -262,9 +262,9 @@ module terminal
                 character(len=320), dimension(300000), intent(inout) :: dictsteno
                 character(len=320), dimension(300000), intent(inout) :: dicttrans
 
-                ! Temporary array, delete entry from it when duplicate detected.
-                character(len=320), dimension(300000) :: tempsteno
-                character(len=320), dimension(300000) :: temptrans
+                ! Fill these with entires known to be duplicates, then crosscheck.
+                character(len=320), dimension(300000) :: nopesteno
+                character(len=320), dimension(300000) :: nopetrans
                 
                 integer :: dentry
                 integer :: dtest
@@ -281,16 +281,18 @@ module terminal
                 character(len=7) :: tempchar
 
                 integer :: iostator
-
-                tempsteno = dictsteno
-                temptrans = dicttrans
+                integer :: dsteno
+                integer :: dtrans
 
                 nsteno = 0
                 ntrans = 1
 
+                dsteno = 0
+                dtrans = 0
+
                 do dentry=1,len(dictsteno)-1
-                        csteno = tempsteno(dentry)
-                        ctrans = temptrans(dentry)
+                        csteno = dictsteno(dentry)
+                        ctrans = dicttrans(dentry)
 
                         !rewind osteno
                         !rewind otrans
@@ -310,39 +312,63 @@ module terminal
                                         tempchar = ""
                                         !read(dtest,*) tempchar
                                         !read(dtest,'(a)',iostat = iostator) tempchar
-                                        write(tempchar, "(I7)") dtest
+                                        write(tempchar, "(I0)") dtest
 
-                                        if (trim(csteno) == trim(tempsteno(dtest)) .and. trim(ctrans) ==&
-                                                &trim(temptrans(dtest))) then
+                                        if (trim(csteno) == trim(dictsteno(dtest)) .and. trim(ctrans) ==&
+                                                &trim(dicttrans(dtest))) then
+
                                                 print *, "Duplicate entry detected:"
                                                 print *, dentry, " ", trim(csteno), " ", trim(ctrans)
-                                                print *, dtest, " ", trim(tempsteno(dtest)), " ", trim(temptrans(dtest))
+                                                print *, dtest, " ", trim(dictsteno(dtest)), " ", trim(dicttrans(dtest))
                                                 dictsteno(dtest) = ""
                                                 dicttrans(dtest) = ""
                                                 print *, "Second entry deleted."
-                                        else if (trim(csteno) == trim(tempsteno(dtest))) then
+
+                                        else if (trim(csteno) == trim(dictsteno(dtest))) then
+
                                                 osteno = trim(osteno)//trim(tempchar)//", "
-                                                tempsteno(dtest) = ""
                                                 nsteno = nsteno + 1
-                                        else if (trim(ctrans) == trim(temptrans(dtest))) then
+
+                                        else if (trim(ctrans) == trim(dicttrans(dtest))) then
+
                                                 otrans = trim(otrans)//trim(tempchar)//", "
-                                                temptrans(dtest) = ""
                                                 ntrans = ntrans + 1
+
                                         end if
                                 end do
-                                if (nsteno > 0) then
-                                        print *, "Entries ", trim(osteno), " based from ", dentry
+                                if (nsteno > 0 .and. trim(indexarr(nopesteno,csteno,dsteno)) == "nope") then
+                                        print *, "Entries ", trim(osteno), " and ", dentry
                                         print *, "Share steno ''", trim(csteno), "''"
                                         nsteno = 0
+                                        dsteno = dsteno + 1
+                                        nopesteno(dsteno) = csteno
                                 end if
-                                if (ntrans > 0) then
-                                        print *, "Entries ", trim(otrans), " based from ", dentry
+                                if (ntrans > 0 .and. trim(indexarr(nopetrans,ctrans,dtrans)) == "nope") then
+                                        print *, "Entries ", trim(otrans), " and ", dentry
                                         print *, "share translation ''", trim(ctrans), "''"
                                         ntrans = 0
+                                        dtrans = dtrans + 1
+                                        nopetrans(dtrans) = ctrans
                                 end if
                         end if
                 end do
         end subroutine find_duplicates
+        character(len=320) function indexarr(carray,cfind,length)
+                character(len=320) :: cfind
+                character(len=320), dimension(300000) :: carray
+
+                integer :: length
+                indexarr = "nope"
+
+                do k=1,length
+                        if (trim(carray(k)) == trim(cfind)) then
+                                indexarr = "yes"
+                                exit
+                        end if
+                end do
+                return
+        end
+
 
 end module terminal
 
