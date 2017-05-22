@@ -53,19 +53,31 @@ module universal
                 write (filenum,'(a)') "}"
         end subroutine saver
         subroutine steno_validation(steno,error)
+                ! Validation of characters based on: STKPWHRAO*EUFRPBLGTSDZ #-/
+
                 character(len=320),intent(in) :: steno
                 character(len=320),intent(out) :: error
 
                 character(len=20) :: swp
                 
-                integer :: k ! Looping
+                integer :: k
 
                 error = ""
 
+                ! RTF specification -> 7-bit ASCII.
+                ! Extended ASCII -> 8-bit.
+                ! I'll just use EASCII to be safe. 256 characters is a terminal standard (CP437 and the like)
+                ! TODO: does gfortran support unicode/utf-8?  This would be useful for international dictionaries.
                 do k=1,255
                         if (index(steno,achar(k)) > 0) then
-                                if (k > 90 .or. (k < 65 .and. (k /= 32 .and. k /= 35 .and. k /= 42 .and. k /= 45 .and. k /= 47)))&
-                                        &then
+                                ! ASCII not allowed:
+                                ! >90 (lowercase and misc symbols)
+                                ! <65!32,35,42,45,47 (numbers and other symbols, but allow " ","#","*","-","/")
+                                ! 67,73,74,77,81,86,88,89 (C,I,J,M,N,Q,V,X,Y)
+                                if (k > 90 &
+                                        & .or. (k < 65 .and. (k /= 32 .and. k /= 35 .and. k /= 42 .and. k /= 45 .and. k /= 47))&
+                                        & .or. k==67 .or. k==73 .or. k==74 .or. k==77 .or. k==81 .or. k==86 .or. k==88 .or. k==89&
+                                        &) then
                                         write (swp,*) k
                                         error = trim(error)//"The character "//achar(k)//" ("//trim(adjustl(swp))//") at position: "
                                         swp = ""
