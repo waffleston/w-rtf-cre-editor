@@ -15,9 +15,12 @@ It's a lightweight RTF/CRE dictionary editor, aiming to be as easy to use as pos
   * [ ] Global search/&replace
   * [x] Duplicate entry resolver
     * [x] Find duplicate entries
-    * [ ] Automatic double duplicate remover
+    * [x] Automatic double duplicate remover
   * [ ] Maintain metadata
   * [ ] Write metadata
+  * [x] Entry validation
+    * [x] Check if steno contains illegal characters
+    * [ ] Check if steno is mechanically possible
 * [ ] Create backup dictionary.
 * [ ] Create alternate dictionaries targeting different standards of compliance.
 * [ ] TUI?
