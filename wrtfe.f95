@@ -85,10 +85,122 @@ module universal
                                         error = trim(error)//trim(adjustl(swp))//" might not be valid in steno."//achar(10)
                                 end if
                         end if
-                end do
+                        
 
-                
+                end do
+                if (len(trim(error)) == 0) call mech_validation(steno,error) 
         end subroutine steno_validation
+        subroutine mech_validation(steno,error)
+                ! This subroutine is a visual mess, and I should probably make a flowchart for it.
+                character(len=320),intent(in) :: steno
+                character(len=320),intent(out) :: error
+                character(len=320) :: swp
+                character :: k_
+                character :: m_
+
+                integer :: k
+
+                swp = "Warning: That entry's steno might not be mechanically possible."
+                error = ""
+                !     STKPWHRAO*EUFRPBLGTSDZ
+                !     *$ %  ^      ^%   $*
+                ! [x] Cannot follow S, T:
+                !     FBLG
+                ! [x] Cannot follow K:
+                !     ST FBLGDZ
+                ! [x] Cannot follow P:
+                !     STK F
+                ! [x] Cannot follow W:
+                !     STKP FBLGDZ
+                ! [x] Cannot follow H:
+                !     STKPW FBLGDZ
+                ! [x] Cannot follow R:
+                !     STKWH F
+                ! [x] Cannot follow A, O, E, U, *:
+                !     KWH -
+                ! [x] Cannot follow F:
+                !     KWH AO*EU -
+                ! [x] Cannot follow B:
+                !     KPWHRAO*EUF -
+                ! [x] Cannot follow L:
+                !     KPWHRAO*EUFB -
+                ! [-] Cannot follow G:                          ! xxxxxxxxxxxxL x
+                !     KPWHRAO*EUFBL -
+                ! [-] Cannot follow D:                          ! STxxxxxxxxxxxxLG x
+                !     STKPWHRAO*EUFBLG -
+                ! [x] Cannot follow Z:
+                !     Literally everything except EOL or /
+                do k=1,(len(trim(steno)))
+                        k_ = steno(k:k)
+                        m_ = steno(k+1:k+1)
+                        if (k_ == m_) then ! Letters should neve be back-to-back: always S-S, T-T, R-R, P-P.
+                                error = swp
+                                exit
+                        end if
+
+                        if (k_ == "K" .or. k_ == "P" .or. k_ == "W" .or. k_ == "H" .or. k_ == "R") then
+                                if (m_ == "S" .or. m_ == "T" .or. m_ == "K" .or. m_ == "F") then
+                                        error = swp
+                                        exit
+                                end if
+                        end if
+
+                        if (k_ == "K" .or. k_ == "W" .or. k_ == "H") then
+                                if (m_ == "B" .or. m_ == "L" .or. m_ == "G" .or. m_ == "D" .or. m_ == "Z") then
+                                        error = swp
+                                        exit
+                                end if
+                        end if
+
+                        if (k_ == "W" .or. k_ == "H" .or. k_ == "R") then
+                                if ((k_ /= "R" .and. m_ == "P") .or. m_ == "W") then
+                                        error = swp
+                                        exit
+                                end if
+                        end if
+
+                        if (k_ == "R" .and. m_ == "H") then
+                                error = swp
+                                exit
+                        end if
+
+                        ! Second half (Vowels and such)
+
+                        if (k_ == "A" .or. k_ == "O" .or. k_ == "E" .or. k_ == "U" .or. k_ == "*"&
+                                &.or. k_ == "F" .or. k_ == "B" .or. k_ == "L" .or. k_ == "G" .or. k_ == "D") then
+                                if (m_ == "-" .or. m_ == "K" .or. m_ == "W" .or. m_ == "H") then
+                                        error = swp
+                                        exit
+                                end if
+                        end if
+
+                        if (k_ == "F" .or. k_ == "B" .or. k_ == "L" .or. k_ == "G" .or. k_ == "D") then
+                                if (m_ == "A" .or. m_ == "O" .or. m_ == "*" .or. m_ == "E" .or. m_ == "U") then
+                                        error = swp
+                                        exit
+                                end if
+                        end if
+                        
+                        if (k_ == "S" .or. k_ == "T") then
+                                if (m_ == "F" .or. m_ == "B" .or. m_ == "L" .or. m_ == "G") then
+                                        error = swp
+                                        exit
+                                end if
+                        end if
+
+                        if (k_ == "B" .or. k_ == "L" .or. k_ == "G" .or. k_ == "D") then
+                                if (m_ == "P" .or. m_ == "R" .or. m_ == "F" .or. m_ == "B") then
+                                        error = swp
+                                        exit
+                                end if
+                        end if
+                        
+                        if (k_ == "Z" .and. (m_ /= "/" .and. m_ /= achar(32))) then
+                                error = swp
+                                exit
+                        end if
+                end do
+        end subroutine mech_validation
 
 end module universal
 module terminal
