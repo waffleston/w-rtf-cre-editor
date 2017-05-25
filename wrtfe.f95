@@ -6,6 +6,7 @@ module universal
         contains
 
         subroutine finder(collection,word,res)
+                ! Returns an array of all entries matching the search word.
                 implicit none
                 character(len=320), dimension(300000), intent(in) :: collection
                 character(len=320), intent(in) :: word
@@ -124,9 +125,9 @@ module universal
                 !     KPWHRAO*EUF -
                 ! [x] Cannot follow L:
                 !     KPWHRAO*EUFB -
-                ! [-] Cannot follow G:                          ! xxxxxxxxxxxxL x
+                ! [x] Cannot follow G:
                 !     KPWHRAO*EUFBL -
-                ! [-] Cannot follow D:                          ! STxxxxxxxxxxxxLG x
+                ! [x] Cannot follow D:
                 !     STKPWHRAO*EUFBLG -
                 ! [x] Cannot follow Z:
                 !     Literally everything except EOL or /
@@ -199,6 +200,21 @@ module universal
                                 error = swp
                                 exit
                         end if
+                        
+                        if (k_ == "G" .or. k_ == "D") then
+                                if (m_ == "L" .or. m_ == "G") then
+                                        error = swp
+                                        exit
+                                end if
+                        end if
+
+                        if (k_ == "D") then
+                                if (m_ == "S" .or. m_ == "T") then
+                                        error = swp
+                                        exit
+                                end if
+                        end if
+                        
                 end do
         end subroutine mech_validation
 
@@ -231,6 +247,8 @@ module terminal
 
                         if (index(command,"quit") == 1) then
                                 exit
+                        else if (index(command,"cancel") == 1) then
+                                stop
                         else
                                 call perform(dictsteno,dictentry,numberoflines,ploverfix,command)
                         end if
@@ -312,6 +330,7 @@ module terminal
                         print *, "fixt [Number] [String] - Replaces the given entry's translation."
                         print *, "test - Alerts you to any duplicate entries in the dictionary."
                         print *, "quit - Saves RTF/CRE file, then exits."
+                        print *, "cancel = exits without saving."
                         print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
                 else if (index(command,"plover") > 0) then
                         ploverfix = .true.
@@ -613,21 +632,27 @@ program waffleRTFEditor
         !---------------------------------------------------------------------------------------------------------------------------
 
         do k=1,300000
+                ! Reads each line into an array, until an exception is thrown.
+                ! I'd set it up to alert the user if it's not an EOF error, but I haven't been able to get a consistent value for
+                ! EOF; IOSTAT 5001 is not the listed as EOF, but OPTION_CONFLICT.  Perhaps my implementation is wrong but it seems
+                ! to work perfectly aside from the odd IOSTAT exit code.
                 read(1,'(a)',iostat = iostaterror) dictionarycontent(k)
-                ! We need to be aware that not all entries in the array are usefull, and some have garbage in them.
-                if (iostaterror > 0) then
-                        numberoflines = k
-                        exit
-                end if
+                if (iostaterror > 0) exit
         end do
         
         do k=1,300000
+                ! Splits dictionarycontent into two seperate arrays - but only if the values exist.
                 isentry = (index(dictionarycontent(k),"{\*\cxs ") == 1)
                 if (isentry .and. index(dictionarycontent(k),"}") > 6) then
                         lengthofentry = len(trim(dictionarycontent(k)))
                         lengthofsteno = index(dictionarycontent(k),"}")
                         dictsteno(k) = dictionarycontent(k)(9:lengthofsteno-1)
                         dictentry(k) = dictionarycontent(k)(lengthofsteno+1:lengthofentry)
+
+                        ! We need to be aware of possible metadata and how this could affect the number of entries.
+                        ! This is a better solution that the previous one, but is still restricted to only correcting "on open"
+                        ! count issues.  REMEMBER that the repl ADDS 1 to numberoflines before adding an entry.
+                        numberoflines = k
                 end if
         end do
 
