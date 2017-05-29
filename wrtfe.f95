@@ -224,12 +224,13 @@ module terminal
         use universal
         contains
 
-        subroutine repl(dictsteno,dictentry,numberoflines,ploverfix)
+        subroutine repl(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix)
                 
                 implicit none
                 character(len=320), dimension(300000), intent(inout) :: dictsteno
                 character(len=320), dimension(300000), intent(inout) :: dictentry
                 integer, intent(inout) :: numberoflines
+                character(len=320), intent(inout) :: dictionaryfile
                 logical, intent(inout) :: ploverfix
 
                 character(len=320) :: command
@@ -250,17 +251,18 @@ module terminal
                         else if (index(command,"cancel") == 1) then
                                 stop
                         else
-                                call perform(dictsteno,dictentry,numberoflines,ploverfix,command)
+                                call perform(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix,command)
                         end if
                 end do
         end subroutine repl
 
-        subroutine perform(dictsteno,dictentry,numberoflines,ploverfix,command)
+        subroutine perform(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix,command)
                 
                 implicit none
                 character(len=320), dimension(300000), intent(inout) :: dictsteno
                 character(len=320), dimension(300000), intent(inout) :: dictentry
                 integer, intent(inout) :: numberoflines
+                character(len=320), intent(inout) :: dictionaryfile
                 logical, intent(inout) :: ploverfix
 
                 character(len=320), intent(inout) :: command
@@ -320,6 +322,8 @@ module terminal
                         dictentry(dswap) = atrans
                 else if (index(command,"test") == 1) then
                         call find_duplicates(dictsteno,dictentry)
+                else if (index(command,"to") == 1) then
+                        dictionaryfile = trim(command(4:320))
                 else if (index(command,"help") > 0) then
                         print *, "Command list:"
                         print *, "finds [string] - Finds [string] in the steno array."
@@ -329,9 +333,10 @@ module terminal
                         print *, "fixs [NUMBER] [STENO] - Replaces the given enrty's steno."
                         print *, "fixt [Number] [String] - Replaces the given entry's translation."
                         print *, "test - Alerts you to any duplicate entries in the dictionary."
+                        print *, "to [file path] - Changes the destination for exit/save."
+                        print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
                         print *, "quit - Saves RTF/CRE file, then exits."
                         print *, "cancel = exits without saving."
-                        print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
                 else if (index(command,"plover") > 0) then
                         ploverfix = .true.
                 else
@@ -665,13 +670,12 @@ program waffleRTFEditor
 
         call all_arguments(arg,dictionaryfile)
         ! Get all text after the filename.
-
         if (len(trim(arg)) > 0) then
                 !print *, arg
-                call perform(dictsteno,dictentry,numberoflines,ploverfix,arg)
+                call perform(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix,arg)
         else
                 ! REPL loop, exiting the subroutine means quit has been called.
-                call repl(dictsteno,dictentry,numberoflines,ploverfix)
+                call repl(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix)
         end if
 
         ! Save the file:
