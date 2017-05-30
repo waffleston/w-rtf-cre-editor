@@ -5,24 +5,36 @@ module universal
         ! This module has the core subroutines, independent of terminal REPL interface.
         contains
 
-        subroutine finder(collection,word,res)
+        subroutine finder(collection,word,res,errlog)
                 ! Returns an array of all entries matching the search word.
                 implicit none
                 character(len=320), dimension(300000), intent(in) :: collection
                 character(len=320), intent(in) :: word
                 character(len=320), dimension(300000), intent(out) :: res
+                character(len=320),intent(out) :: errlog
                 
                 integer :: l
                 integer :: indexofword
+                integer :: entrycount
+
+                entrycount = 0
+                errlog = ""
+
                 do l=1,300000
         
                         indexofword = index(collection(l), trim(word))
                         if (indexofword > 0) then
                                 res(l) = collection(l)
+                                entrycount = entrycount + 1
                         else
                                 res(l) = ""
                         end if
                 end do
+
+                if (entrycount == 0) then
+                        errlog = "No entries matched search criteria."
+                end if
+
         end subroutine
         subroutine saver(dictsteno,dictentry,filenum)
                 character(len=320), dimension(300000), intent(in) :: dictsteno
@@ -275,6 +287,8 @@ module terminal
 
                 character(len=320) :: asteno
                 character(len=320) :: atrans
+
+                character(len=320) :: errlog
                 
                 arguments = ""
                 dswap = 0
@@ -282,11 +296,13 @@ module terminal
                 if (index(command,"finds") == 1) then
                         arguments = command(7:320)
                         !print *, command
-                        call finder(dictsteno,arguments,swapspace)
+                        call finder(dictsteno,arguments,swapspace,errlog)
+                        if (len(trim(errlog)) > 0) print*, trim(errlog)
                         call printer(swapspace,dictentry)
                 else if (index(command,"findt") == 1) then
                         arguments = command(7:320)
-                        call finder(dictentry,arguments,swapspace)
+                        call finder(dictentry,arguments,swapspace,errlog)
+                        if (len(trim(errlog)) > 0) print*, trim(errlog)
                         call printer(dictsteno,swapspace)
                 else if (index(command,"del") == 1) then
                         arguments = command(5:320)
