@@ -297,11 +297,13 @@ module terminal
                         arguments = command(7:320)
                         !print *, command
                         call finder(dictsteno,arguments,swapspace,errlog)
+                        if (numberoflines == 0) print*, "There are no entries in the dictionary."
                         if (len(trim(errlog)) > 0) print*, trim(errlog)
                         call printer(swapspace,dictentry)
                 else if (index(command,"findt") == 1) then
                         arguments = command(7:320)
                         call finder(dictentry,arguments,swapspace,errlog)
+                        if (numberoflines == 0) print*, "There are no entries in the dictionary."
                         if (len(trim(errlog)) > 0) print*, trim(errlog)
                         call printer(dictsteno,swapspace)
                 else if (index(command,"del") == 1) then
