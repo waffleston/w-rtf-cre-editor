@@ -1,44 +1,67 @@
+! w-rtf-cre-editor v0.0.32
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
+
 module universal
         ! This module has the core subroutines, independent of terminal REPL interface.
+
+        !---------------------------------------------------------------------------------------------------------------------------
+        ! Definition - "Statics"
+        !---------------------------------------------------------------------------------------------------------------------------
+
+        character (len=25) :: corev = "w-rtf-cre-editor v0.0.32"
+        integer, parameter :: maxCLen = 320
+        integer, parameter :: maxDSize = 300000
+
+        !---------------------------------------------------------------------------------------------------------------------------
+        ! Definition - "Globals"
+        !---------------------------------------------------------------------------------------------------------------------------
+
+        character (len=320) :: dictionaryfile ! The filename of the main dictionary.
+        integer :: numberoflines ! Largest possible number of entries. (Disregarding deletions and metadata.)
+
+        !---------------------------------------------------------------------------------------------------------------------------
+        ! Subroutines
+        !---------------------------------------------------------------------------------------------------------------------------
+
         contains
 
         subroutine finder(collection,word,res,errlog)
                 ! Returns an array of all entries matching the search word.
                 implicit none
-                character(len=320), dimension(300000), intent(in) :: collection
-                character(len=320), intent(in) :: word
-                character(len=320), dimension(300000), intent(out) :: res
-                character(len=320),intent(out) :: errlog
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: collection
+                character(len=maxCLen), intent(in) :: word
+                character(len=maxCLen), dimension(maxDSize), intent(out) :: res
+                character(len=maxCLen), intent(out) :: errlog
                 
                 integer :: l
                 integer :: indexofword
-                integer :: entrycount
+                logical :: entrystat
 
-                entrycount = 0
+                entrystat = .false.
                 errlog = ""
 
-                do l=1,300000
+                do l=1,numberoflines
         
                         indexofword = index(collection(l), trim(word))
                         if (indexofword > 0) then
                                 res(l) = collection(l)
-                                entrycount = entrycount + 1
+                               entrystat = .true.
                         else
                                 res(l) = ""
                         end if
                 end do
 
-                if (entrycount == 0) then
+                if (entrystat .eqv. .false.) then
                         errlog = "No entries matched search criteria."
                 end if
 
         end subroutine
         subroutine saver(dictsteno,dictentry,filenum)
-                character(len=320), dimension(300000), intent(in) :: dictsteno
-                character(len=320), dimension(300000), intent(in) :: dictentry
+                ! Writes the steno and translations to the provided file number.
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: dictsteno
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: dictentry
                 integer, intent(in) :: filenum
 
                 integer :: l
@@ -47,15 +70,17 @@ module universal
                 logical :: stenoexists
                 logical :: transexists
 
-                character(len=320) :: ds
-                character(len=320) :: de
+                character(len=maxCLen) :: ds
+                character(len=maxCLen) :: de
                 write (filenum,'(a)') "{\rtf1\ansi{\*\cxrev100}\cxdict{\*\cxsystem WRTFE}{\stylesheet{\s0 Normal;}}"
+                ! TODO ^ We're clearing any metadata that might have been in the dictionary here.
+                ! This is probably not advised practice, but supporting metadata isn't a high priority right now.
 
-                do l=1,300000
+                do l=1,numberoflines
                         indexofsteno = len(trim(dictsteno(l)))
                         indexoftrans = len(trim(dictentry(l)))
-                        stenoexists = (indexofsteno < 320 .and. indexofsteno > 0)
-                        transexists = (indexoftrans < 320 .and. indexoftrans > 0)
+                        stenoexists = (indexofsteno < maxCLen .and. indexofsteno > 0)
+                        transexists = (indexoftrans < maxCLen .and. indexoftrans > 0)
                         ds = dictsteno(l)
                         de = dictentry(l)
                         if (stenoexists .and. transexists) then
@@ -67,9 +92,10 @@ module universal
         end subroutine saver
         subroutine steno_validation(steno,error)
                 ! Validation of characters based on: STKPWHRAO*EUFRPBLGTSDZ #-/
+                ! TODO Some flavors support numbers.
 
-                character(len=320),intent(in) :: steno
-                character(len=320),intent(out) :: error
+                character(len=maxCLen),intent(in) :: steno
+                character(len=maxCLen),intent(out) :: error
 
                 character(len=20) :: swp
                 
@@ -105,9 +131,10 @@ module universal
         end subroutine steno_validation
         subroutine mech_validation(steno,error)
                 ! This subroutine is a visual mess, and I should probably make a flowchart for it.
-                character(len=320),intent(in) :: steno
-                character(len=320),intent(out) :: error
-                character(len=320) :: swp
+                ! TODO Numbers should technically be valid depending on the flavor of RTF.
+                character(len=maxCLen),intent(in) :: steno
+                character(len=maxCLen),intent(out) :: error
+                character(len=maxCLen) :: swp
                 character :: k_
                 character :: m_
 
@@ -236,16 +263,14 @@ module terminal
         use universal
         contains
 
-        subroutine repl(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix)
+        subroutine repl(dictsteno,dictentry,ploverfix)
                 
                 implicit none
-                character(len=320), dimension(300000), intent(inout) :: dictsteno
-                character(len=320), dimension(300000), intent(inout) :: dictentry
-                integer, intent(inout) :: numberoflines
-                character(len=320), intent(inout) :: dictionaryfile
+                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictsteno
+                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictentry
                 logical, intent(inout) :: ploverfix
 
-                character(len=320) :: command
+                character(len=maxCLen) :: command
                 
                 command = ""
 
@@ -263,59 +288,57 @@ module terminal
                         else if (index(command,"cancel") == 1) then
                                 stop
                         else
-                                call perform(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix,command)
+                                call perform(dictsteno,dictentry,ploverfix,command)
                         end if
                 end do
         end subroutine repl
 
-        subroutine perform(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix,command)
+        subroutine perform(dictsteno,dictentry,ploverfix,command)
                 
                 implicit none
-                character(len=320), dimension(300000), intent(inout) :: dictsteno
-                character(len=320), dimension(300000), intent(inout) :: dictentry
-                integer, intent(inout) :: numberoflines
-                character(len=320), intent(inout) :: dictionaryfile
+                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictsteno
+                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictentry
                 logical, intent(inout) :: ploverfix
 
-                character(len=320), intent(inout) :: command
+                character(len=maxCLen), intent(inout) :: command
 
-                character(len=320) :: arguments
-                character(len=320), dimension(300000) :: swapspace
+                character(len=maxCLen) :: arguments
+                character(len=maxCLen), dimension(maxDSize) :: swapspace
 
                 integer :: dswap
-                character(len=320) :: char_swp
+                character(len=maxCLen) :: char_swp
 
-                character(len=320) :: asteno
-                character(len=320) :: atrans
+                character(len=maxCLen) :: asteno
+                character(len=maxCLen) :: atrans
 
-                character(len=320) :: errlog
+                character(len=maxCLen) :: errlog
                 
                 arguments = ""
                 dswap = 0
 
                 if (index(command,"finds") == 1) then
-                        arguments = command(7:320)
+                        arguments = command(7:maxCLen)
                         !print *, command
                         call finder(dictsteno,arguments,swapspace,errlog)
                         if (numberoflines == 0) print*, "There are no entries in the dictionary."
                         if (len(trim(errlog)) > 0) print*, trim(errlog)
                         call printer(swapspace,dictentry)
                 else if (index(command,"findt") == 1) then
-                        arguments = command(7:320)
+                        arguments = command(7:maxCLen)
                         call finder(dictentry,arguments,swapspace,errlog)
                         if (numberoflines == 0) print*, "There are no entries in the dictionary."
                         if (len(trim(errlog)) > 0) print*, trim(errlog)
                         call printer(dictsteno,swapspace)
                 else if (index(command,"del") == 1) then
-                        arguments = command(5:320)
+                        arguments = command(5:maxCLen)
                         read(arguments,*) dswap
                         print *, "Deleting entry ", dswap, ": ", trim(dictsteno(dswap)), " ", trim(dictentry(dswap))
                         dictsteno(dswap) = ""
                         dictentry(dswap) = ""
                 else if (index(command,"add") == 1) then
-                        arguments = command(5:320)
+                        arguments = command(5:maxCLen)
                         asteno = arguments(1:index(arguments," ")-1)
-                        atrans = arguments(index(arguments," ")+1:320)
+                        atrans = arguments(index(arguments," ")+1:maxCLen)
                         numberoflines = numberoflines + 1
                         dictsteno(numberoflines) = asteno
                         dictentry(numberoflines) = atrans
@@ -325,15 +348,15 @@ module terminal
                                 &trim(dictentry(numberoflines))
                         print *, trim(char_swp) !Error log for validation.
                 else if (index(command,"fixs") == 1) then
-                        arguments = command(6:32)
-                        asteno = arguments(index(arguments," ")+1:320)
+                        arguments = command(6:maxCLen)
+                        asteno = arguments(index(arguments," ")+1:maxCLen)
                         read(arguments(1:index(arguments," ")-1),*) dswap
                         print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)), "] with [",&
                                 &trim(asteno), " ", trim(dictentry(dswap)), "]"
                         dictsteno(dswap) = asteno
                 else if (index(command,"fixt") == 1) then
-                        arguments = command(6:32)
-                        atrans = arguments(index(arguments," ")+1:320)
+                        arguments = command(6:maxCLen)
+                        atrans = arguments(index(arguments," ")+1:maxCLen)
                         read(arguments(1:index(arguments," ")-1),*) dswap
                         print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)), "] with [",&
                                 &trim(dictsteno(dswap)), " ", trim(atrans), "]"
@@ -341,7 +364,7 @@ module terminal
                 else if (index(command,"test") == 1) then
                         call find_duplicates(dictsteno,dictentry)
                 else if (index(command,"to") == 1) then
-                        dictionaryfile = trim(command(4:320))
+                        dictionaryfile = trim(command(4:maxCLen))
                 else if (index(command,"help") > 0) then
                         print *, "Command list:"
                         print *, "finds [string] - Finds [string] in the steno array."
@@ -364,19 +387,19 @@ module terminal
 
         subroutine printer(steno,trans)
                 implicit none
-                character(len=320), dimension(300000), intent(in) :: steno
-                character(len=320), dimension(300000), intent(in) :: trans
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: steno
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: trans
                 
                 integer :: l
                 integer :: indexofsteno
                 integer :: indexoftrans
                 logical :: stenoexists
                 logical :: transexists
-                do l=1,300000
+                do l=1,numberoflines
                         indexofsteno = len(trim(steno(l)))
                         indexoftrans = len(trim(trans(l)))
-                        stenoexists = (indexofsteno < 320 .and. indexofsteno > 0)
-                        transexists = (indexoftrans < 320 .and. indexoftrans > 0)
+                        stenoexists = (indexofsteno < maxCLen .and. indexofsteno > 0)
+                        transexists = (indexoftrans < maxCLen .and. indexoftrans > 0)
                         if (stenoexists .and. transexists) then
                                 print *, l, trim(steno(l)), " -> ", trim(trans(l))
                         end if
@@ -385,25 +408,25 @@ module terminal
 
         subroutine singleprint(array)
                 implicit none
-                character(len=320), dimension(300000), intent(in) :: array
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: array
 
                 integer :: l
 
-                do l=1,300000
-                        if (len(trim(array(l))) > 0 .and. len(trim(array(l))) < 320) then
+                do l=1,numberoflines
+                        if (len(trim(array(l))) > 0 .and. len(trim(array(l))) < maxCLen) then
                                 print *, l, trim(array(l))
                         end if
                 end do
         end subroutine singleprint
 
         subroutine all_arguments(cmd,filename)
-                character(len=320), intent(out) :: cmd
-                character(len=320), intent(in) :: filename
+                character(len=maxCLen), intent(out) :: cmd
+                character(len=maxCLen), intent(in) :: filename
 
-                character(len=320) :: arguments
-                character(len=320) :: two
-                character(len=320) :: three
-                character(len=320) :: four
+                character(len=maxCLen) :: arguments
+                character(len=maxCLen) :: two
+                character(len=maxCLen) :: three
+                character(len=maxCLen) :: four
 
                 integer :: afterfile
                 integer :: lenfile
@@ -420,17 +443,17 @@ module terminal
                 afterfile = index(cmd,trim(filename))
                 lenfile = len(trim(filename))
 
-                arguments = cmd(afterfile+lenfile+1:320)
+                arguments = cmd(afterfile+lenfile+1:maxCLen)
 
                 cmd = arguments
         end subroutine all_arguments
         subroutine find_duplicates(dictsteno, dicttrans)
-                character(len=320), dimension(300000), intent(inout) :: dictsteno
-                character(len=320), dimension(300000), intent(inout) :: dicttrans
+                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictsteno
+                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dicttrans
 
                 ! Fill these with entires known to be duplicates, then crosscheck.
-                character(len=320), dimension(300000) :: nopesteno
-                character(len=320), dimension(300000) :: nopetrans
+                character(len=maxCLen), dimension(maxDSize) :: nopesteno
+                character(len=maxCLen), dimension(maxDSize) :: nopetrans
                 
                 integer :: dentry
                 integer :: dtest
@@ -438,11 +461,11 @@ module terminal
                 integer :: nsteno
                 integer :: ntrans
 
-                character(len=320) :: csteno
-                character(len=320) :: ctrans
+                character(len=maxCLen) :: csteno
+                character(len=maxCLen) :: ctrans
 
-                character(len=320) :: osteno
-                character(len=320) :: otrans
+                character(len=maxCLen) :: osteno
+                character(len=maxCLen) :: otrans
 
                 character(len=7) :: tempchar
 
@@ -466,8 +489,8 @@ module terminal
                         osteno = ""
                         otrans = ""
 
-                        if (len(trim(csteno)) > 0 .and. len(trim(csteno)) < 320 .and. len(trim(ctrans)) >0&
-                                &.and. len(trim(ctrans)) < 320) then
+                        if (len(trim(csteno)) > 0 .and. len(trim(csteno)) < maxCLen .and. len(trim(ctrans)) >0&
+                                &.and. len(trim(ctrans)) < maxCLen) then
 
                                 ntrans = 0
                                 nsteno = 0
@@ -519,9 +542,9 @@ module terminal
                         end if
                 end do
         end subroutine find_duplicates
-        character(len=320) function indexarr(carray,cfind,length)
-                character(len=320) :: cfind
-                character(len=320), dimension(300000) :: carray
+        character(len=maxCLen) function indexarr(carray,cfind,length)
+                character(len=maxCLen) :: cfind
+                character(len=maxCLen), dimension(maxDSize) :: carray
 
                 integer :: length
                 indexarr = "nope"
@@ -549,24 +572,20 @@ program waffleRTFEditor
 
         integer :: i, j, k ! loop var.
 
-        character (len=320) :: dictionaryfile ! The filename of the dictionary.
-        character(len=320) :: arg
+        character(len=maxCLen) :: arg
         logical :: dictpresent
         integer :: iostaterror
         
-        character(len=320), dimension(300000) :: dictionarycontent ! Fortran arrays start at 1.
-        character(len=320), dimension(300000) :: dictentry
-        character(len=320), dimension(300000) :: dictsteno
+        character(len=maxCLen), dimension(maxDSize) :: dictionarycontent ! Fortran arrays start at 1.
+        character(len=maxCLen), dimension(maxDSize) :: dictentry
+        character(len=maxCLen), dimension(maxDSize) :: dictsteno
 
         logical :: isentry
 
-        integer :: numberoflines
-
         character (len=78) :: introduction ! 320 char list.
-        character (len=320) :: headertext !Name of program
+        character (len=maxCLen) :: headertext !Name of program
 
         character (len=1) :: esc ! escape character
-        character(len=320) :: tuiTopLeft
 
         integer :: lengthofentry
         integer :: lengthofsteno
@@ -581,7 +600,6 @@ program waffleRTFEditor
         j = 0
         k = 0
 
-        dictionaryfile = ""
         arg = ""
         dictpresent = .false.
         iostaterror = 0
@@ -592,18 +610,22 @@ program waffleRTFEditor
 
         isentry = .false.
 
-        numberoflines = 0
-
         introduction = ""
         headertext = "Waffle RTF/CRE Editor"
 
         esc = achar(27)
-        tuiTopLeft = esc//"[320A"//esc//"[320D"
 
         lengthofentry = 0
         lengthofsteno = 0
 
         ploverfix = .false.
+
+        !---------------------------------------------------------------------------------------------------------------------------
+        ! Globals - from universal module
+        !---------------------------------------------------------------------------------------------------------------------------
+
+        dictionaryfile = ""
+        numberoflines = 0
 
         !---------------------------------------------------------------------------------------------------------------------------
         ! Execution - Arguments and Validation
@@ -620,7 +642,7 @@ program waffleRTFEditor
 
                 select case(trim(arg))
                 case ('-v', '--version', '-version', '--v')
-                        print *, "Version 1.0"
+                        print *, corev
                         stop
                 case ('-h', '--help', '-help', '--h')
                         print *, "Usage: ./wrtfe [filename.rtf]"
@@ -654,7 +676,7 @@ program waffleRTFEditor
         ! Execution - Read dictionary and split into two arrays.
         !---------------------------------------------------------------------------------------------------------------------------
 
-        do k=1,300000
+        do k=1,maxDSize
                 ! Reads each line into an array, until an exception is thrown.
                 ! I'd set it up to alert the user if it's not an EOF error, but I haven't been able to get a consistent value for
                 ! EOF; IOSTAT 5001 is not the listed as EOF, but OPTION_CONFLICT.  Perhaps my implementation is wrong but it seems
@@ -663,7 +685,7 @@ program waffleRTFEditor
                 if (iostaterror > 0) exit
         end do
         
-        do k=1,300000
+        do k=1,maxDSize
                 ! Splits dictionarycontent into two seperate arrays - but only if the values exist.
                 isentry = (index(dictionarycontent(k),"{\*\cxs ") == 1)
                 if (isentry .and. index(dictionarycontent(k),"}") > 6) then
@@ -683,17 +705,14 @@ program waffleRTFEditor
         ! Execution - Manipulation.
         !---------------------------------------------------------------------------------------------------------------------------
         
-        
-       
-
         call all_arguments(arg,dictionaryfile)
         ! Get all text after the filename.
         if (len(trim(arg)) > 0) then
                 !print *, arg
-                call perform(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix,arg)
+                call perform(dictsteno,dictentry,ploverfix,arg)
         else
                 ! REPL loop, exiting the subroutine means quit has been called.
-                call repl(dictsteno,dictentry,numberoflines,dictionaryfile,ploverfix)
+                call repl(dictsteno,dictentry,ploverfix)
         end if
 
         ! Save the file:
@@ -710,7 +729,7 @@ program waffleRTFEditor
         ! Plover /line converter
         if (ploverfix) then
                 open(2, file=trim(dictionaryfile)//".plover.rtf", iostat = iostaterror, status="replace")
-                do k=1,300000
+                do k=1,numberoflines
                         if (index(dictentry(k),"\line") == 1) then
                                 dictentry(k) = "{^"//achar(10)//"^}{-|}"
                         end if
@@ -723,5 +742,3 @@ program waffleRTFEditor
 
         stop
 end program waffleRTFEditor
-
-
