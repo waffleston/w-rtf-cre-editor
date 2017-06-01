@@ -90,18 +90,16 @@ module universal
 
                 write (filenum,'(a)') "}"
         end subroutine saver
-        subroutine steno_validation(steno,error)
-                ! Validation of characters based on: STKPWHRAO*EUFRPBLGTSDZ #-/
-                ! TODO Some flavors support numbers.
+        character(len=maxCLen) function steno_validation(steno)
+                ! Validation of characters based on: STKPWHRAO*EUFRPBLGTSDZ #-/ 1234567890
 
                 character(len=maxCLen),intent(in) :: steno
-                character(len=maxCLen),intent(out) :: error
 
                 character(len=20) :: swp
                 
                 integer :: k
 
-                error = ""
+                steno_validation = ""
 
                 ! RTF specification -> 7-bit ASCII.
                 ! Extended ASCII -> 8-bit.
@@ -111,37 +109,61 @@ module universal
                         if (index(steno,achar(k)) > 0) then
                                 ! ASCII not allowed:
                                 ! >90 (lowercase and misc symbols)
-                                ! <65!32,35,42,45,47 (numbers and other symbols, but allow " ","#","*","-","/")
+                                ! <48!32,35,42,45,47 (other symbols, but allow " ","#","*","-","/")
+                                ! 58,59,60,61,62,63,64 (":",";","<","=",">","?","@")
                                 ! 67,73,74,77,81,86,88,89 (C,I,J,M,N,Q,V,X,Y)
                                 if (k > 90 &
-                                        & .or. (k < 65 .and. (k /= 32 .and. k /= 35 .and. k /= 42 .and. k /= 45 .and. k /= 47))&
+                                        & .or. (k < 48 .and. (k /= 32 .and. k /= 35 .and. k /= 42 .and. k /= 45 .and. k /= 47))&
+                                        & .or. k==58 .or. k==59 .or. k==60 .or. k==61 .or. k==62 .or. k==63 .or. k==64&
                                         & .or. k==67 .or. k==73 .or. k==74 .or. k==77 .or. k==81 .or. k==86 .or. k==88 .or. k==89&
                                         &) then
                                         write (swp,*) k
-                                        error = trim(error)//"The character "//achar(k)//" ("//trim(adjustl(swp))//") at position: "
+                                        steno_validation = trim(steno_validation)&
+                                                &//"The character "//achar(k)//" ("//trim(adjustl(swp))//") at position: "
                                         swp = ""
                                         write (swp,*) index(steno,achar(k))
-                                        error = trim(error)//trim(adjustl(swp))//" might not be valid in steno."//achar(10)
+                                        steno_validation = trim(steno_validation)&
+                                                &//trim(adjustl(swp))//" might not be valid in steno."//achar(10)
                                 end if
                         end if
                         
 
                 end do
-                if (len(trim(error)) == 0) call mech_validation(steno,error) 
-        end subroutine steno_validation
-        subroutine mech_validation(steno,error)
-                ! This subroutine is a visual mess, and I should probably make a flowchart for it.
-                ! TODO Numbers should technically be valid depending on the flavor of RTF.
-                character(len=maxCLen),intent(in) :: steno
-                character(len=maxCLen),intent(out) :: error
+                if (len(trim(steno_validation)) == 0) steno_validation = mech_validation(steno)
+                return
+        end function steno_validation
+        character(len=maxCLen) function mech_validation(steno_)
+                ! This function is a visual mess, and I should probably make a flowchart for it.
+                character(len=maxCLen), intent(in) :: steno_
+                character(len=maxCLen) :: steno
                 character(len=maxCLen) :: swp
                 character :: k_
                 character :: m_
 
+                character (len=maxCLen) :: a
                 integer :: k
 
+                steno = steno_
+
+
+                ! Numbers are positionally the same as the letter they replace, so let's make them letters.
+                do
+                        a = steno
+                        if (index(steno,'1') > 0) steno(index(steno,'1'):index(steno,'1')) = 'S'
+                        if (index(steno,'2') > 0) steno(index(steno,'2'):index(steno,'2')) = 'T'
+                        if (index(steno,'3') > 0) steno(index(steno,'3'):index(steno,'3')) = 'P'
+                        if (index(steno,'4') > 0) steno(index(steno,'4'):index(steno,'4')) = 'H'
+                        if (index(steno,'5') > 0) steno(index(steno,'5'):index(steno,'5')) = 'A'
+                        if (index(steno,'6') > 0) steno(index(steno,'6'):index(steno,'6')) = 'F'
+                        if (index(steno,'7') > 0) steno(index(steno,'7'):index(steno,'7')) = 'P'
+                        if (index(steno,'8') > 0) steno(index(steno,'8'):index(steno,'8')) = 'L'
+                        if (index(steno,'9') > 0) steno(index(steno,'9'):index(steno,'9')) = 'T'
+                        if (index(steno,'0') > 0) steno(index(steno,'0'):index(steno,'0')) = 'O'
+                        if (steno == a) exit
+                end do
+
                 swp = "Warning: That entry's steno might not be mechanically possible."
-                error = ""
+                mech_validation = ""
                 !     STKPWHRAO*EUFRPBLGTSDZ
                 !     *$ %  ^      ^%   $*
                 ! [x] Cannot follow S, T:
@@ -174,33 +196,33 @@ module universal
                         k_ = steno(k:k)
                         m_ = steno(k+1:k+1)
                         if (k_ == m_) then ! Letters should neve be back-to-back: always S-S, T-T, R-R, P-P.
-                                error = swp
+                                mech_validation = swp
                                 exit
                         end if
 
                         if (k_ == "K" .or. k_ == "P" .or. k_ == "W" .or. k_ == "H" .or. k_ == "R") then
                                 if (m_ == "S" .or. m_ == "T" .or. m_ == "K" .or. m_ == "F") then
-                                        error = swp
+                                        mech_validation = swp
                                         exit
                                 end if
                         end if
 
                         if (k_ == "K" .or. k_ == "W" .or. k_ == "H") then
                                 if (m_ == "B" .or. m_ == "L" .or. m_ == "G" .or. m_ == "D" .or. m_ == "Z") then
-                                        error = swp
+                                        mech_validation = swp
                                         exit
                                 end if
                         end if
 
                         if (k_ == "W" .or. k_ == "H" .or. k_ == "R") then
                                 if ((k_ /= "R" .and. m_ == "P") .or. m_ == "W") then
-                                        error = swp
+                                        mech_validation = swp
                                         exit
                                 end if
                         end if
 
                         if (k_ == "R" .and. m_ == "H") then
-                                error = swp
+                                mech_validation = swp
                                 exit
                         end if
 
@@ -209,53 +231,54 @@ module universal
                         if (k_ == "A" .or. k_ == "O" .or. k_ == "E" .or. k_ == "U" .or. k_ == "*"&
                                 &.or. k_ == "F" .or. k_ == "B" .or. k_ == "L" .or. k_ == "G" .or. k_ == "D") then
                                 if (m_ == "-" .or. m_ == "K" .or. m_ == "W" .or. m_ == "H") then
-                                        error = swp
+                                        mech_validation = swp
                                         exit
                                 end if
                         end if
 
                         if (k_ == "F" .or. k_ == "B" .or. k_ == "L" .or. k_ == "G" .or. k_ == "D") then
                                 if (m_ == "A" .or. m_ == "O" .or. m_ == "*" .or. m_ == "E" .or. m_ == "U") then
-                                        error = swp
+                                        mech_validation = swp
                                         exit
                                 end if
                         end if
                         
                         if (k_ == "S" .or. k_ == "T") then
                                 if (m_ == "F" .or. m_ == "B" .or. m_ == "L" .or. m_ == "G") then
-                                        error = swp
+                                        mech_validation = swp
                                         exit
                                 end if
                         end if
 
                         if (k_ == "B" .or. k_ == "L" .or. k_ == "G" .or. k_ == "D") then
                                 if (m_ == "P" .or. m_ == "R" .or. m_ == "F" .or. m_ == "B") then
-                                        error = swp
+                                        mech_validation = swp
                                         exit
                                 end if
                         end if
                         
                         if (k_ == "Z" .and. (m_ /= "/" .and. m_ /= achar(32))) then
-                                error = swp
+                                mech_validation = swp
                                 exit
                         end if
                         
                         if (k_ == "G" .or. k_ == "D") then
                                 if (m_ == "L" .or. m_ == "G") then
-                                        error = swp
+                                        mech_validation = swp
                                         exit
                                 end if
                         end if
 
                         if (k_ == "D") then
                                 if (m_ == "S" .or. m_ == "T") then
-                                        error = swp
+                                        mech_validation = swp
                                         exit
                                 end if
                         end if
                         
                 end do
-        end subroutine mech_validation
+                return
+        end function mech_validation
 
 end module universal
 module terminal
@@ -342,7 +365,7 @@ module terminal
                         numberoflines = numberoflines + 1
                         dictsteno(numberoflines) = asteno
                         dictentry(numberoflines) = atrans
-                        call steno_validation(asteno,char_swp)
+                        char_swp = steno_validation(asteno)
                         
                         print *, "Added entry", numberoflines, ":", trim(dictsteno(numberoflines)), " ",&
                                 &trim(dictentry(numberoflines))
