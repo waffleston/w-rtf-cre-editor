@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.32
+! w-rtf-cre-editor v0.0.34
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=25) :: corev = "w-rtf-cre-editor v0.0.32"
+        character (len=25) :: corev = "w-rtf-cre-editor v0.0.34"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -200,7 +200,7 @@ module universal
                                 exit
                         end if
 
-                        if (k_ == "K" .or. k_ == "P" .or. k_ == "W" .or. k_ == "H" .or. k_ == "R") then
+                        if (k_ == "K" .or. k_ == "P" .or. k_ == "W" .or. k_ == "H") then
                                 if (m_ == "S" .or. m_ == "T" .or. m_ == "K" .or. m_ == "F") then
                                         mech_validation = swp
                                         exit
@@ -222,6 +222,11 @@ module universal
                         end if
 
                         if (k_ == "R" .and. m_ == "H") then
+                                mech_validation = swp
+                                exit
+                        end if
+
+                        if (k_ == "R" .and. (m_ == "K" .or. m_ == "F")) then
                                 mech_validation = swp
                                 exit
                         end if
@@ -304,6 +309,7 @@ module terminal
 
                 do while (.true.)
                         command = ""
+                        write(*,"(a)",advance='no') "wrtfe >> "
                         read (*,'(a)') command
 
                         if (index(command,"quit") == 1) then
@@ -335,6 +341,7 @@ module terminal
                 character(len=maxCLen) :: atrans
 
                 character(len=maxCLen) :: errlog
+                integer :: iostaterr
                 
                 arguments = ""
                 dswap = 0
@@ -354,10 +361,14 @@ module terminal
                         call printer(dictsteno,swapspace)
                 else if (index(command,"del") == 1) then
                         arguments = command(5:maxCLen)
-                        read(arguments,*) dswap
-                        print *, "Deleting entry ", dswap, ": ", trim(dictsteno(dswap)), " ", trim(dictentry(dswap))
-                        dictsteno(dswap) = ""
-                        dictentry(dswap) = ""
+                        read(arguments,*,iostat=iostaterr) dswap
+                        if (iostaterr > 0 .or. dswap > numberoflines) then
+                                print *, "No valid entry number was provided."
+                        else
+                                print *, "Deleting entry ", dswap, ": ", trim(dictsteno(dswap)), " ", trim(dictentry(dswap))
+                                dictsteno(dswap) = ""
+                                dictentry(dswap) = ""
+                        end if
                 else if (index(command,"add") == 1) then
                         arguments = command(5:maxCLen)
                         asteno = arguments(1:index(arguments," ")-1)
@@ -373,29 +384,37 @@ module terminal
                 else if (index(command,"fixs") == 1) then
                         arguments = command(6:maxCLen)
                         asteno = arguments(index(arguments," ")+1:maxCLen)
-                        read(arguments(1:index(arguments," ")-1),*) dswap
-                        print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)), "] with [",&
-                                &trim(asteno), " ", trim(dictentry(dswap)), "]"
-                        dictsteno(dswap) = asteno
+                        read(arguments(1:index(arguments," ")-1),*,iostat=iostaterr) dswap
+                        if (iostaterr > 0 .or. dswap > numberoflines) then
+                                print *, "No valid entry number was provided."
+                        else
+                                print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)),&
+                                        &"] with [", trim(asteno), " ", trim(dictentry(dswap)), "]"
+                                dictsteno(dswap) = asteno
+                        end if
                 else if (index(command,"fixt") == 1) then
                         arguments = command(6:maxCLen)
                         atrans = arguments(index(arguments," ")+1:maxCLen)
-                        read(arguments(1:index(arguments," ")-1),*) dswap
-                        print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)), "] with [",&
-                                &trim(dictsteno(dswap)), " ", trim(atrans), "]"
-                        dictentry(dswap) = atrans
+                        read(arguments(1:index(arguments," ")-1),*,iostat=iostaterr) dswap
+                        if (iostaterr > 0 .or. dswap > numberoflines) then
+                                print *, "No valid entry number was provided."
+                        else
+                                print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)),&
+                                        & "] with [", trim(dictsteno(dswap)), " ", trim(atrans), "]"
+                                dictentry(dswap) = atrans
+                        end if
                 else if (index(command,"test") == 1) then
                         call find_duplicates(dictsteno,dictentry)
                 else if (index(command,"to") == 1) then
                         dictionaryfile = trim(command(4:maxCLen))
                 else if (index(command,"help") > 0) then
                         print *, "Command list:"
+                        print *, "add [STROKES] [string] - Adds the entry (No spaces in steno)."
+                        print *, "del [number] - Deletes the entry from both arrays."
                         print *, "finds [string] - Finds [string] in the steno array."
                         print *, "findt [string] - Finds [string] in the translation array."
-                        print *, "del [NUMBER] - Deletes the entry from both arrays."
-                        print *, "add [STENO] [String] - Adds the entry (No spaces in steno)."
-                        print *, "fixs [NUMBER] [STENO] - Replaces the given enrty's steno."
-                        print *, "fixt [Number] [String] - Replaces the given entry's translation."
+                        print *, "fixs [number] [STROKES] - Replaces the given enrty's steno."
+                        print *, "fixt [number] [string] - Replaces the given entry's translation."
                         print *, "test - Alerts you to any duplicate entries in the dictionary."
                         print *, "to [file path] - Changes the destination for exit/save."
                         print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
@@ -496,38 +515,32 @@ module terminal
                 integer :: dsteno
                 integer :: dtrans
 
+                !real :: start,finish
+                !call cpu_time(start)
+
                 nsteno = 0
-                ntrans = 1
+                ntrans = 0
 
                 dsteno = 0
                 dtrans = 0
 
-                do dentry=1,len(dictsteno)-1
+                osteno = ""
+                otrans = ""
+
+                
+
+                do dentry=1,numberoflines-1
                         csteno = dictsteno(dentry)
                         ctrans = dicttrans(dentry)
 
-                        !rewind osteno
-                        !rewind otrans
+                        ! I'm assuming that entries without strokes are invalid or incorrectly deleted.
+                        if (len(trim(csteno)) > 0&
+                                &.and. .not. indexarr(nopetrans,ctrans,dtrans)&
+                                &.and. .not. indexarr(nopesteno,csteno,dsteno)) then
 
-                        osteno = ""
-                        otrans = ""
-
-                        if (len(trim(csteno)) > 0 .and. len(trim(csteno)) < maxCLen .and. len(trim(ctrans)) >0&
-                                &.and. len(trim(ctrans)) < maxCLen) then
-
-                                ntrans = 0
-                                nsteno = 0
-
-                                
-
-                                do dtest = dentry+1,len(dictsteno)
-                                        tempchar = ""
-                                        !read(dtest,*) tempchar
-                                        !read(dtest,'(a)',iostat = iostator) tempchar
-                                        write(tempchar, "(I0)") dtest
-
-                                        if (trim(csteno) == trim(dictsteno(dtest)) .and. trim(ctrans) ==&
-                                                &trim(dicttrans(dtest))) then
+                                do dtest = dentry+1,numberoflines
+                                        if (csteno == dictsteno(dtest) .and. ctrans ==&
+                                                &dicttrans(dtest)) then
 
                                                 print *, "Duplicate entry detected:"
                                                 print *, dentry, " ", trim(csteno), " ", trim(ctrans)
@@ -536,52 +549,56 @@ module terminal
                                                 dicttrans(dtest) = ""
                                                 print *, "Second entry deleted."
 
-                                        else if (trim(csteno) == trim(dictsteno(dtest))) then
+                                        else if (csteno == dictsteno(dtest)) then
+                                                write(tempchar, "(I0)") dtest
 
                                                 osteno = trim(osteno)//trim(tempchar)//", "
                                                 nsteno = nsteno + 1
 
-                                        else if (trim(ctrans) == trim(dicttrans(dtest))) then
+                                        else if (ctrans == dicttrans(dtest)) then
+                                                write(tempchar, "(I0)") dtest
 
                                                 otrans = trim(otrans)//trim(tempchar)//", "
                                                 ntrans = ntrans + 1
 
                                         end if
                                 end do
-                                if (nsteno > 0 .and. trim(indexarr(nopesteno,csteno,dsteno)) == "nope") then
+                                if (nsteno > 0) then
                                         print *, "Entries ", trim(osteno), " and ", dentry
                                         print *, "Share steno ''", trim(csteno), "''"
                                         nsteno = 0
                                         dsteno = dsteno + 1
                                         nopesteno(dsteno) = csteno
+                                        osteno = ""
                                 end if
-                                if (ntrans > 0 .and. trim(indexarr(nopetrans,ctrans,dtrans)) == "nope") then
+                                if (ntrans > 0) then
                                         print *, "Entries ", trim(otrans), " and ", dentry
                                         print *, "share translation ''", trim(ctrans), "''"
                                         ntrans = 0
                                         dtrans = dtrans + 1
                                         nopetrans(dtrans) = ctrans
+                                        otrans = ""
                                 end if
                         end if
                 end do
+                !call cpu_time(finish)
+                !print '("Executed in ", f6.3, " seconds.")', finish-start
         end subroutine find_duplicates
-        character(len=maxCLen) function indexarr(carray,cfind,length)
+        logical function indexarr(carray,cfind,length)
                 character(len=maxCLen) :: cfind
                 character(len=maxCLen), dimension(maxDSize) :: carray
 
                 integer :: length
-                indexarr = "nope"
+                indexarr = .false.
 
                 do k=1,length
                         if (trim(carray(k)) == trim(cfind)) then
-                                indexarr = "yes"
+                                indexarr = .true.
                                 exit
                         end if
                 end do
                 return
-        end
-
-
+        end function indexarr
 end module terminal
 
 program waffleRTFEditor
@@ -627,9 +644,10 @@ program waffleRTFEditor
         dictpresent = .false.
         iostaterror = 0
 
-        ! dictionarycontent cannot be initialized effectively.
-        ! dictentry
-        ! dictsteno
+        ! Does this fill the entire array with ""?
+        dictionarycontent = ""
+        dictentry = ""
+        dictsteno = ""
 
         isentry = .false.
 
@@ -668,7 +686,10 @@ program waffleRTFEditor
                         print *, corev
                         stop
                 case ('-h', '--help', '-help', '--h')
-                        print *, "Usage: ./wrtfe [filename.rtf]"
+                        print *, "Usage: ./wrtfe filename.rtf [options]"
+                        print *, "    Options not necessary, can be found by typing ''help'' in REPL."
+                        print *, " -h Displays this help text."
+                        print *, " -v Displays version number."
                         stop
                 case default
                         dictionaryfile = trim(arg) ! Dictionary filename acquired, proceed.
