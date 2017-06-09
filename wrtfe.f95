@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.34
+! w-rtf-cre-editor v0.0.35
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=25) :: corev = "w-rtf-cre-editor v0.0.34"
+        character (len=25) :: corev = "w-rtf-cre-editor v0.0.35"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -111,11 +111,13 @@ module universal
                                 ! >90 (lowercase and misc symbols)
                                 ! <48!32,35,42,45,47 (other symbols, but allow " ","#","*","-","/")
                                 ! 58,59,60,61,62,63,64 (":",";","<","=",">","?","@")
-                                ! 67,73,74,77,81,86,88,89 (C,I,J,M,N,Q,V,X,Y)
+                                ! 67,73,74,77,81,86,88,89 (C,I,J,M,Q,V,X,Y)
+                                ! 78 (N)
                                 if (k > 90 &
                                         & .or. (k < 48 .and. (k /= 32 .and. k /= 35 .and. k /= 42 .and. k /= 45 .and. k /= 47))&
                                         & .or. k==58 .or. k==59 .or. k==60 .or. k==61 .or. k==62 .or. k==63 .or. k==64&
                                         & .or. k==67 .or. k==73 .or. k==74 .or. k==77 .or. k==81 .or. k==86 .or. k==88 .or. k==89&
+                                        & .or. k==78&
                                         &) then
                                         write (swp,*) k
                                         steno_validation = trim(steno_validation)&
@@ -405,6 +407,8 @@ module terminal
                         end if
                 else if (index(command,"test") == 1) then
                         call find_duplicates(dictsteno,dictentry)
+                else if (index(command,"count") == 1) then
+                        print *, numberoflines
                 else if (index(command,"to") == 1) then
                         dictionaryfile = trim(command(4:maxCLen))
                 else if (index(command,"help") > 0) then
@@ -416,6 +420,7 @@ module terminal
                         print *, "fixs [number] [STROKES] - Replaces the given enrty's steno."
                         print *, "fixt [number] [string] - Replaces the given entry's translation."
                         print *, "test - Alerts you to any duplicate entries in the dictionary."
+                        print *, "count - Prints the number of entries in the dictionary."
                         print *, "to [file path] - Changes the destination for exit/save."
                         print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
                         print *, "quit - Saves RTF/CRE file, then exits."
