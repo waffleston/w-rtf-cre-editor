@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.35
+! w-rtf-cre-editor v0.0.36
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=25) :: corev = "w-rtf-cre-editor v0.0.35"
+        character (len=25) :: corev = "w-rtf-cre-editor v0.0.36"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -27,77 +27,87 @@ module universal
 
         contains
 
-        subroutine finder(collection,word,res,errlog)
+        function finder(collection,word,errlog) RESULT(resultant)
                 ! Returns an array of all entries matching the search word.
                 implicit none
+
                 character(len=maxCLen), dimension(maxDSize), intent(in) :: collection
                 character(len=maxCLen), intent(in) :: word
-                character(len=maxCLen), dimension(maxDSize), intent(out) :: res
                 character(len=maxCLen), intent(out) :: errlog
-                
-                integer :: l
-                integer :: indexofword
-                logical :: entrystat
 
-                entrystat = .false.
+                character(len=maxCLen), dimension(maxDSize) :: resultant
+                
+                integer :: l ! loop variable
+                integer :: indexofword
+                logical :: entryfound
+
+                resultant = ""
+                entryfound = .false.
                 errlog = ""
 
                 do l=1,numberoflines
         
                         indexofword = index(collection(l), trim(word))
                         if (indexofword > 0) then
-                                res(l) = collection(l)
-                               entrystat = .true.
+                                resultant(l) = collection(l)
+                                entryfound = .true.
                         else
-                                res(l) = ""
+                                resultant(l) = ""
                         end if
                 end do
 
-                if (entrystat .eqv. .false.) then
+                if (entryfound .eqv. .false.) then
                         errlog = "No entries matched search criteria."
                 end if
+                return
+        end function finder
 
-        end subroutine
-        subroutine saver(dictsteno,dictentry,filenum)
+        subroutine saver(dictsteno,dicttrans,filenumber)
                 ! Writes the steno and translations to the provided file number.
-                character(len=maxCLen), dimension(maxDSize), intent(in) :: dictsteno
-                character(len=maxCLen), dimension(maxDSize), intent(in) :: dictentry
-                integer, intent(in) :: filenum
 
-                integer :: l
-                integer :: indexofsteno
-                integer :: indexoftrans
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: dictsteno
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: dicttrans
+                integer, intent(in) :: filenumber
+
+                integer :: l ! loop variable
+                integer :: lengthofsteno
+                integer :: lengthoftrans
                 logical :: stenoexists
                 logical :: transexists
 
-                character(len=maxCLen) :: ds
-                character(len=maxCLen) :: de
-                write (filenum,'(a)') "{\rtf1\ansi{\*\cxrev100}\cxdict{\*\cxsystem WRTFE}{\stylesheet{\s0 Normal;}}"
+                character(len=maxCLen) :: thissteno
+                character(len=maxCLen) :: thistrans
+
+                write (filenumber,'(a)') "{\rtf1\ansi{\*\cxrev100}\cxdict{\*\cxsystem WRTFE}{\stylesheet{\s0 Normal;}}"
                 ! TODO ^ We're clearing any metadata that might have been in the dictionary here.
                 ! This is probably not advised practice, but supporting metadata isn't a high priority right now.
 
                 do l=1,numberoflines
-                        indexofsteno = len(trim(dictsteno(l)))
-                        indexoftrans = len(trim(dictentry(l)))
-                        stenoexists = (indexofsteno < maxCLen .and. indexofsteno > 0)
-                        transexists = (indexoftrans < maxCLen .and. indexoftrans > 0)
-                        ds = dictsteno(l)
-                        de = dictentry(l)
+                        thissteno = dictsteno(l)
+                        thistrans = dicttrans(l)
+                        lengthofsteno = len(trim(thissteno))
+                        lengthoftrans = len(trim(thistrans))
+                        stenoexists = (lengthofsteno > 0)
+                        transexists = (lengthoftrans > 0)
+                        
                         if (stenoexists .and. transexists) then
-                                write (filenum,'(a)') '{\*\cxs '//trim(ds)//'}'//trim(de)
+                                write (filenumber,'(a)') '{\*\cxs '//trim(thissteno)//'}'//trim(thistrans)
                         end if
                 end do
 
-                write (filenum,'(a)') "}"
+                write (filenumber,'(a)') "}"
         end subroutine saver
-        character(len=maxCLen) function steno_validation(steno)
+        
+        character(len=maxCLen) function steno_validation(strokes)
+                ! Verifies validity of the strokes by ensuring there are no "non-steno" characters.
                 ! Validation of characters based on: STKPWHRAO*EUFRPBLGTSDZ #-/ 1234567890
+                ! Returns error text.
 
-                character(len=maxCLen),intent(in) :: steno
+                character(len=maxCLen),intent(in) :: strokes
 
-                character(len=20) :: swp
+                character(len=20) :: swp ! Holds k as character array.
                 
-                integer :: k
+                integer :: k ! loop var
 
                 steno_validation = ""
 
@@ -106,7 +116,7 @@ module universal
                 ! I'll just use EASCII to be safe. 256 characters is a terminal standard (CP437 and the like)
                 ! TODO: does gfortran support unicode/utf-8?  This would be useful for international dictionaries.
                 do k=1,255
-                        if (index(steno,achar(k)) > 0) then
+                        if (index(strokes,achar(k)) > 0) then
                                 ! ASCII not allowed:
                                 ! >90 (lowercase and misc symbols)
                                 ! <48!32,35,42,45,47 (other symbols, but allow " ","#","*","-","/")
@@ -123,7 +133,7 @@ module universal
                                         steno_validation = trim(steno_validation)&
                                                 &//"The character "//achar(k)//" ("//trim(adjustl(swp))//") at position: "
                                         swp = ""
-                                        write (swp,*) index(steno,achar(k))
+                                        write (swp,*) index(strokes,achar(k))
                                         steno_validation = trim(steno_validation)&
                                                 &//trim(adjustl(swp))//" might not be valid in steno."//achar(10)
                                 end if
@@ -131,21 +141,26 @@ module universal
                         
 
                 end do
-                if (len(trim(steno_validation)) == 0) steno_validation = mech_validation(steno)
+                if (len(trim(steno_validation)) == 0) steno_validation = mech_validation(strokes)
                 return
         end function steno_validation
+        
         character(len=maxCLen) function mech_validation(steno_)
+                ! Verifies validity of the strokes by ensuring they're mechanically possible.
                 ! This function is a visual mess, and I should probably make a flowchart for it.
+                ! Returns error text.
+
                 character(len=maxCLen), intent(in) :: steno_
                 character(len=maxCLen) :: steno
-                character(len=maxCLen) :: swp
-                character :: k_
-                character :: m_
+                character(len=maxCLen) :: swp ! Error text holder.
+                character :: k_ ! current char
+                character :: m_ ! following char
 
-                character (len=maxCLen) :: a
-                integer :: k
+                character (len=maxCLen) :: a ! loop char
+                integer :: k ! loop var
 
                 steno = steno_
+                ! TODO steno should be strokes, but I'll let it slide this time.
 
 
                 ! Numbers are positionally the same as the letter they replace, so let's make them letters.
@@ -233,7 +248,29 @@ module universal
                                 exit
                         end if
 
-                        ! Second half (Vowels and such)
+                        ! Vowel order
+
+                        if ((k_ == "O" .or. k_ == "*" .or. k_ == "E" .or. k_ == "U") .and. m_ == "A") then
+                                mech_validation = swp
+                                exit
+                        end if
+
+                        if ((k_ == "*" .or. k_ == "E" .or. k_ == "U") .and. m_ == "O") then
+                                mech_validation = swp
+                                exit
+                        end if
+
+                        if ((k_ == "E" .or. k_ == "U") .and. m_ == "*") then
+                                mech_validation = swp
+                                exit
+                        end if
+
+                        if (k_ == "U" .and. m_ == "E") then
+                                mech_validation = swp
+                                exit
+                        end if
+
+                        ! Second half
 
                         if (k_ == "A" .or. k_ == "O" .or. k_ == "E" .or. k_ == "U" .or. k_ == "*"&
                                 &.or. k_ == "F" .or. k_ == "B" .or. k_ == "L" .or. k_ == "G" .or. k_ == "D") then
@@ -293,11 +330,11 @@ module terminal
         use universal
         contains
 
-        subroutine repl(dictsteno,dictentry,ploverfix)
-                
+        subroutine repl(dictsteno,dicttrans,ploverfix)
                 implicit none
+
                 character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictsteno
-                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictentry
+                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dicttrans
                 logical, intent(inout) :: ploverfix
 
                 character(len=maxCLen) :: command
@@ -319,31 +356,30 @@ module terminal
                         else if (index(command,"cancel") == 1) then
                                 stop
                         else
-                                call perform(dictsteno,dictentry,ploverfix,command)
+                                call perform(dictsteno,dicttrans,ploverfix,command)
                         end if
                 end do
         end subroutine repl
 
-        subroutine perform(dictsteno,dictentry,ploverfix,command)
-                
+        subroutine perform(dictsteno,dicttrans,ploverfix,command)
                 implicit none
+
                 character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictsteno
-                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictentry
+                character(len=maxCLen), dimension(maxDSize), intent(inout) :: dicttrans
                 logical, intent(inout) :: ploverfix
 
                 character(len=maxCLen), intent(inout) :: command
 
                 character(len=maxCLen) :: arguments
-                character(len=maxCLen), dimension(maxDSize) :: swapspace
+                character(len=maxCLen), dimension(maxDSize) :: swapspace ! multiple use variable: used in `finds`, `findt`.
 
-                integer :: dswap
-                character(len=maxCLen) :: char_swp
+                integer :: dswap ! multiple use variable: used in `del`, `fixs`, `fixt`.
 
-                character(len=maxCLen) :: asteno
-                character(len=maxCLen) :: atrans
+                character(len=maxCLen) :: asteno ! added strokes
+                character(len=maxCLen) :: atrans ! added translation
 
-                character(len=maxCLen) :: errlog
-                integer :: iostaterr
+                character(len=maxCLen) :: errlog ! multiple use error text dump.
+                integer :: iostaterr ! read commands require a variable to dump into for error handling.
                 
                 arguments = ""
                 dswap = 0
@@ -351,13 +387,13 @@ module terminal
                 if (index(command,"finds") == 1) then
                         arguments = command(7:maxCLen)
                         !print *, command
-                        call finder(dictsteno,arguments,swapspace,errlog)
+                        swapspace = finder(dictsteno,arguments,errlog)
                         if (numberoflines == 0) print*, "There are no entries in the dictionary."
                         if (len(trim(errlog)) > 0) print*, trim(errlog)
-                        call printer(swapspace,dictentry)
+                        call printer(swapspace,dicttrans)
                 else if (index(command,"findt") == 1) then
                         arguments = command(7:maxCLen)
-                        call finder(dictentry,arguments,swapspace,errlog)
+                        swapspace = finder(dicttrans,arguments,errlog)
                         if (numberoflines == 0) print*, "There are no entries in the dictionary."
                         if (len(trim(errlog)) > 0) print*, trim(errlog)
                         call printer(dictsteno,swapspace)
@@ -367,9 +403,9 @@ module terminal
                         if (iostaterr > 0 .or. dswap > numberoflines) then
                                 print *, "No valid entry number was provided."
                         else
-                                print *, "Deleting entry ", dswap, ": ", trim(dictsteno(dswap)), " ", trim(dictentry(dswap))
+                                print *, "Deleting entry ", dswap, ": ", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap))
                                 dictsteno(dswap) = ""
-                                dictentry(dswap) = ""
+                                dicttrans(dswap) = ""
                         end if
                 else if (index(command,"add") == 1) then
                         arguments = command(5:maxCLen)
@@ -377,12 +413,12 @@ module terminal
                         atrans = arguments(index(arguments," ")+1:maxCLen)
                         numberoflines = numberoflines + 1
                         dictsteno(numberoflines) = asteno
-                        dictentry(numberoflines) = atrans
-                        char_swp = steno_validation(asteno)
+                        dicttrans(numberoflines) = atrans
+                        errlog = steno_validation(asteno)
                         
                         print *, "Added entry", numberoflines, ":", trim(dictsteno(numberoflines)), " ",&
-                                &trim(dictentry(numberoflines))
-                        print *, trim(char_swp) !Error log for validation.
+                                &trim(dicttrans(numberoflines))
+                        print *, trim(errlog) !Error log for validation.
                 else if (index(command,"fixs") == 1) then
                         arguments = command(6:maxCLen)
                         asteno = arguments(index(arguments," ")+1:maxCLen)
@@ -390,8 +426,8 @@ module terminal
                         if (iostaterr > 0 .or. dswap > numberoflines) then
                                 print *, "No valid entry number was provided."
                         else
-                                print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)),&
-                                        &"] with [", trim(asteno), " ", trim(dictentry(dswap)), "]"
+                                print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap)),&
+                                        &"] with [", trim(asteno), " ", trim(dicttrans(dswap)), "]"
                                 dictsteno(dswap) = asteno
                         end if
                 else if (index(command,"fixt") == 1) then
@@ -401,12 +437,12 @@ module terminal
                         if (iostaterr > 0 .or. dswap > numberoflines) then
                                 print *, "No valid entry number was provided."
                         else
-                                print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dictentry(dswap)),&
+                                print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap)),&
                                         & "] with [", trim(dictsteno(dswap)), " ", trim(atrans), "]"
-                                dictentry(dswap) = atrans
+                                dicttrans(dswap) = atrans
                         end if
                 else if (index(command,"test") == 1) then
-                        call find_duplicates(dictsteno,dictentry)
+                        call find_duplicates(dictsteno,dicttrans)
                 else if (index(command,"count") == 1) then
                         print *, numberoflines
                 else if (index(command,"to") == 1) then
@@ -433,57 +469,43 @@ module terminal
         end subroutine perform
 
         subroutine printer(steno,trans)
+                ! Prints out the contents of the two arrays side-by-side prefixed by row number.
                 implicit none
+                
                 character(len=maxCLen), dimension(maxDSize), intent(in) :: steno
                 character(len=maxCLen), dimension(maxDSize), intent(in) :: trans
                 
                 integer :: l
-                integer :: indexofsteno
-                integer :: indexoftrans
+                integer :: lengthofsteno
+                integer :: lengthoftrans
                 logical :: stenoexists
                 logical :: transexists
                 do l=1,numberoflines
-                        indexofsteno = len(trim(steno(l)))
-                        indexoftrans = len(trim(trans(l)))
-                        stenoexists = (indexofsteno < maxCLen .and. indexofsteno > 0)
-                        transexists = (indexoftrans < maxCLen .and. indexoftrans > 0)
+                        lengthofsteno = len(trim(steno(l)))
+                        lengthoftrans = len(trim(trans(l)))
+                        stenoexists = (lengthofsteno > 0)
+                        transexists = (lengthoftrans > 0)
                         if (stenoexists .and. transexists) then
                                 print *, l, trim(steno(l)), " -> ", trim(trans(l))
                         end if
                 end do
         end subroutine
 
-        subroutine singleprint(array)
-                implicit none
-                character(len=maxCLen), dimension(maxDSize), intent(in) :: array
-
-                integer :: l
-
-                do l=1,numberoflines
-                        if (len(trim(array(l))) > 0 .and. len(trim(array(l))) < maxCLen) then
-                                print *, l, trim(array(l))
-                        end if
-                end do
-        end subroutine singleprint
-
         subroutine all_arguments(cmd,filename)
+                ! Removes the filename from `cmd`.
+
                 character(len=maxCLen), intent(out) :: cmd
                 character(len=maxCLen), intent(in) :: filename
 
                 character(len=maxCLen) :: arguments
-                character(len=maxCLen) :: two
-                character(len=maxCLen) :: three
-                character(len=maxCLen) :: four
 
                 integer :: afterfile
                 integer :: lenfile
-                integer :: swapspace
 
                 arguments = ""
 
                 afterfile = 0
                 lenfile = 0
-                swapspace = 0
 
                 call get_command(cmd)
                 
@@ -494,6 +516,7 @@ module terminal
 
                 cmd = arguments
         end subroutine all_arguments
+
         subroutine find_duplicates(dictsteno, dicttrans)
                 character(len=maxCLen), dimension(maxDSize), intent(inout) :: dictsteno
                 character(len=maxCLen), dimension(maxDSize), intent(inout) :: dicttrans
@@ -502,23 +525,23 @@ module terminal
                 character(len=maxCLen), dimension(maxDSize) :: nopesteno
                 character(len=maxCLen), dimension(maxDSize) :: nopetrans
                 
-                integer :: dentry
-                integer :: dtest
+                integer :: dentry ! outer loop var
+                integer :: dtest ! inner loop var
 
-                integer :: nsteno
-                integer :: ntrans
+                integer :: nsteno ! number of duplicate strokes of core
+                integer :: ntrans ! number of duplicate translations of core
 
-                character(len=maxCLen) :: csteno
-                character(len=maxCLen) :: ctrans
+                character(len=maxCLen) :: csteno ! core strokes
+                character(len=maxCLen) :: ctrans ! core translation
 
-                character(len=maxCLen) :: osteno
-                character(len=maxCLen) :: otrans
+                character(len=maxCLen) :: osteno ! list of duplicate strokes of core
+                character(len=maxCLen) :: otrans ! list of duplicate translations of core
 
                 character(len=7) :: tempchar
 
                 integer :: iostator
-                integer :: dsteno
-                integer :: dtrans
+                integer :: dsteno ! number of strokes already deemed duplicates.
+                integer :: dtrans ! number of translations already deemed duplicates.
 
                 !real :: start,finish
                 !call cpu_time(start)
@@ -538,8 +561,8 @@ module terminal
                         csteno = dictsteno(dentry)
                         ctrans = dicttrans(dentry)
 
-                        ! I'm assuming that entries without strokes are invalid or incorrectly deleted.
-                        if (len(trim(csteno)) > 0&
+                        ! If strokes and translation exist, it's an entry.  Then make sure it's not a duplicate.
+                        if (len(trim(csteno)) > 0 .and. len(trim(ctrans)) > 0&
                                 &.and. .not. indexarr(nopetrans,ctrans,dtrans)&
                                 &.and. .not. indexarr(nopesteno,csteno,dsteno)) then
 
@@ -589,6 +612,7 @@ module terminal
                 !call cpu_time(finish)
                 !print '("Executed in ", f6.3, " seconds.")', finish-start
         end subroutine find_duplicates
+
         logical function indexarr(carray,cfind,length)
                 character(len=maxCLen) :: cfind
                 character(len=maxCLen), dimension(maxDSize) :: carray
@@ -604,6 +628,7 @@ module terminal
                 end do
                 return
         end function indexarr
+
 end module terminal
 
 program waffleRTFEditor
@@ -635,7 +660,7 @@ program waffleRTFEditor
         integer :: lengthofentry
         integer :: lengthofsteno
 
-        logical :: ploverfix
+        logical :: ploverfix ! used as flag for whether or not to create a plover-specific copy.
 
         !---------------------------------------------------------------------------------------------------------------------------
         ! Initialization
