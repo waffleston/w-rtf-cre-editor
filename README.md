@@ -4,10 +4,10 @@ A stenography RTF/CRE dictionary editor.
 It's a lightweight RTF/CRE dictionary editor, aiming to be as easy to use as possible without sacrificing advanced functionality.  There are a number of useful features, including:
 * Duplicate entry detection & resolution
 * Entry validation
-* Dictionary searches (both steno and translations)
+* Dictionary searches (both strokes and translations)
 ## [Download](build/)
 (Windows and GNU/Linux)  
-It's currently a terminal-only program, but I'm taking steps to make it easy to integrate with a GUI.
+It's currently a terminal-only program, but I'm working on an Electron based wrapper for it.
 ## Todo:
 * [x] Terminal
   * [x] REPL dictionary editing.
@@ -28,10 +28,11 @@ It's currently a terminal-only program, but I'm taking steps to make it easy to 
   * [x] Entry validation
     * [x] *(TODO tree compressed)*
     <!--
-    * [x] Check if steno contains illegal characters
-    * [x] Check if steno is mechanically possible
+    * [x] Check if strokes contain illegal characters
+    * [x] Check if strokes are mechanically possible
     -->
 * [ ] Create backup dictionary.
 * [ ] Create alternate dictionaries targeting different standards of compliance.
 * [ ] TUI?
 * [ ] GUI
+  * [ ] Electron
