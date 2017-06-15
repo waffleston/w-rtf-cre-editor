@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.36
+! w-rtf-cre-editor v0.0.38
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=25) :: corev = "w-rtf-cre-editor v0.0.36"
+        character (len=38) :: corev = "w-rtf-cre-editor v0.0.38 (2017-jun-14)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -115,7 +115,7 @@ module universal
                 ! Extended ASCII -> 8-bit.
                 ! I'll just use EASCII to be safe. 256 characters is a terminal standard (CP437 and the like)
                 ! TODO: does gfortran support unicode/utf-8?  This would be useful for international dictionaries.
-                do k=1,255
+                do k=1,256
                         if (index(strokes,achar(k)) > 0) then
                                 ! ASCII not allowed:
                                 ! >90 (lowercase and misc symbols)
@@ -351,10 +351,21 @@ module terminal
                         write(*,"(a)",advance='no') "wrtfe >> "
                         read (*,'(a)') command
 
-                        if (index(command,"quit") == 1) then
+                        if (index(command,"save") == 1) then
                                 exit
                         else if (index(command,"cancel") == 1) then
                                 stop
+                        else if (index(command,"quit") == 1) then
+                                print *, "Would you like to save before exiting? (Y/n) + enter"
+                                ! Fortran doesn't have a "get single char" function, so we'll make do with the general read().
+                                read (*,'(a)') command
+                                if (index(command,"Y") == 1) then
+                                        exit
+                                else if (index(command,"n") == 1) then
+                                        stop
+                                else
+                                        print *, "Response did not meet criteria."
+                                end if
                         else
                                 call perform(dictsteno,dicttrans,ploverfix,command)
                         end if
@@ -406,6 +417,9 @@ module terminal
                                 print *, "Deleting entry ", dswap, ": ", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap))
                                 dictsteno(dswap) = ""
                                 dicttrans(dswap) = ""
+                        end if
+                        if (dswap == numberoflines) then
+                                numberoflines = numberoflines - 1
                         end if
                 else if (index(command,"add") == 1) then
                         arguments = command(5:maxCLen)
@@ -459,7 +473,8 @@ module terminal
                         print *, "count - Prints the number of entries in the dictionary."
                         print *, "to [file path] - Changes the destination for exit/save."
                         print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
-                        print *, "quit - Saves RTF/CRE file, then exits."
+                        print *, "save - Saves RTF/CRE file, then exits."
+                        print *, "quit - prompt for save or cancel"
                         print *, "cancel = exits without saving."
                 else if (index(command,"plover") > 0) then
                         ploverfix = .true.
@@ -802,7 +817,7 @@ program waffleRTFEditor
         !---------------------------------------------------------------------------------------------------------------------------
         ! Plover /line converter
         if (ploverfix) then
-                open(2, file=trim(dictionaryfile)//".plover.rtf", iostat = iostaterror, status="replace")
+                open(2, file=dictionaryfile(1:len(trim(dictionaryfile))-4)//".plover.rtf", iostat = iostaterror, status="replace")
                 do k=1,numberoflines
                         if (index(dictentry(k),"\line") == 1) then
                                 dictentry(k) = "{^"//achar(10)//"^}{-|}"
