@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.38
+! w-rtf-cre-editor v0.0.41
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38) :: corev = "w-rtf-cre-editor v0.0.38 (2017-jun-14)"
+        character (len=38) :: corev = "w-rtf-cre-editor v0.0.41 (2017-jun-15)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -62,14 +62,15 @@ module universal
                 return
         end function finder
 
-        subroutine saver(dictsteno,dicttrans,filenumber)
+        subroutine saver(dictsteno,dicttrans,filenumber,creheader)
                 ! Writes the steno and translations to the provided file number.
 
                 character(len=maxCLen), dimension(maxDSize), intent(in) :: dictsteno
                 character(len=maxCLen), dimension(maxDSize), intent(in) :: dicttrans
                 integer, intent(in) :: filenumber
+                character(len=maxCLen*5), optional :: creheader
 
-                integer :: l ! loop variable
+                integer :: l, m, n ! loop variables
                 integer :: lengthofsteno
                 integer :: lengthoftrans
                 logical :: stenoexists
@@ -78,9 +79,41 @@ module universal
                 character(len=maxCLen) :: thissteno
                 character(len=maxCLen) :: thistrans
 
-                write (filenumber,'(a)') "{\rtf1\ansi{\*\cxrev100}\cxdict{\*\cxsystem WRTFE}{\stylesheet{\s0 Normal;}}"
-                ! TODO ^ We're clearing any metadata that might have been in the dictionary here.
-                ! This is probably not advised practice, but supporting metadata isn't a high priority right now.
+                character(len=maxCLen) :: cresystem
+                integer :: cresyscount
+
+                if (present(creheader)) then
+                        if (len(trim(creheader)) > 0) then
+                                ! Time to isolate the system that created the RTF file, then replace it.
+                                do m=(index(creheader,"{\*\cxsystem")+13),len(trim(creheader))
+                                        cresystem = creheader(index(creheader,"{\*\cxsystem"):m)
+                                        cresyscount = 1
+                                        do n=13,len(trim(cresystem))
+                                                if (cresystem(n:n) == "{") then
+                                                        cresyscount = cresyscount + 1
+                                                else if (cresystem(n:n) == "}") then
+                                                        cresyscount = cresyscount - 1
+                                                end if
+                                        end do
+                                        if (cresyscount == 0) then
+                                                ! When we hit this we have the system tag, and should be able to replace the
+                                                ! provider with our own.  If the system tag doesn't exist, this wont be hit.
+                                                creheader = creheader(1:index(creheader,"{\*\cxsystem")+12)//"w-rtf-cre-editor"//&
+                                                        &creheader(m:len(trim(creheader)))
+                                                exit
+                                        end if
+                                end do
+                                write (filenumber,'(a)') trim(creheader)
+                        else
+                                ! This is redundant of the below overwrite, but the program crashes if we test for length and it's
+                                ! not defined.
+                                write (filenumber,'(a)') "{\rtf1\ansi{\*\cxrev100}"//&
+                                        &"\cxdict{\*\cxsystem w-rtf-cre-editor}{\stylesheet{\s0 Normal;}}"
+                        end if
+                else
+                        write (filenumber,'(a)') "{\rtf1\ansi{\*\cxrev100}"//&
+                                &"\cxdict{\*\cxsystem w-rtf-cre-editor}{\stylesheet{\s0 Normal;}}"
+                end if
 
                 do l=1,numberoflines
                         thissteno = dictsteno(l)
@@ -495,6 +528,7 @@ module terminal
                 integer :: lengthoftrans
                 logical :: stenoexists
                 logical :: transexists
+
                 do l=1,numberoflines
                         lengthofsteno = len(trim(steno(l)))
                         lengthoftrans = len(trim(trans(l)))
@@ -655,7 +689,7 @@ program waffleRTFEditor
         ! Definition
         !---------------------------------------------------------------------------------------------------------------------------
 
-        integer :: i, j, k ! loop var.
+        integer :: i, j, k, l ! loop var.
 
         character(len=maxCLen) :: arg
         logical :: dictpresent
@@ -677,6 +711,9 @@ program waffleRTFEditor
 
         logical :: ploverfix ! used as flag for whether or not to create a plover-specific copy.
 
+        character(len=maxCLen*5) :: creheader ! Following the CRE spec, the header metadata.
+        integer :: creheaderrows ! The number of rows taken up by header metadata.
+
         !---------------------------------------------------------------------------------------------------------------------------
         ! Initialization
         !---------------------------------------------------------------------------------------------------------------------------
@@ -684,6 +721,7 @@ program waffleRTFEditor
         i = 0
         j = 0
         k = 0
+        l = 0
 
         arg = ""
         dictpresent = .false.
@@ -705,6 +743,9 @@ program waffleRTFEditor
         lengthofsteno = 0
 
         ploverfix = .false.
+
+        creheader = ""
+        creheaderrows = 0
 
         !---------------------------------------------------------------------------------------------------------------------------
         ! Globals - from universal module
@@ -780,15 +821,19 @@ program waffleRTFEditor
                 if (isentry .and. index(dictionarycontent(k),"}") > 6) then
                         lengthofentry = len(trim(dictionarycontent(k)))
                         lengthofsteno = index(dictionarycontent(k),"}")
-                        dictsteno(k) = dictionarycontent(k)(9:lengthofsteno-1)
-                        dictentry(k) = dictionarycontent(k)(lengthofsteno+1:lengthofentry)
+                        dictsteno(k-creheaderrows) = dictionarycontent(k)(9:lengthofsteno-1)
+                        dictentry(k-creheaderrows) = dictionarycontent(k)(lengthofsteno+1:lengthofentry)
 
                         ! We need to be aware of possible metadata and how this could affect the number of entries.
                         ! This is a better solution that the previous one, but is still restricted to only correcting "on open"
                         ! count issues.  REMEMBER that the repl ADDS 1 to numberoflines before adding an entry.
-                        numberoflines = k
+                        numberoflines = k-creheaderrows
+                else if (numberoflines == 0) then
+                        creheader = trim(creheader)//trim(dictionarycontent(k))//achar(10)
+                        creheaderrows = creheaderrows + 1
                 end if
         end do
+        creheader = creheader(1:len(trim(creheader))-1)
 
         !---------------------------------------------------------------------------------------------------------------------------
         ! Execution - Manipulation.
@@ -808,7 +853,7 @@ program waffleRTFEditor
         close (1)
         open(1, file=dictionaryfile, iostat = iostaterror, status="replace")
 
-        call saver(dictsteno,dictentry,1)
+        call saver(dictsteno,dictentry,1,creheader)
         
         close (1)
 
@@ -820,6 +865,13 @@ program waffleRTFEditor
                 open(2, file=dictionaryfile(1:len(trim(dictionaryfile))-4)//".plover.rtf", iostat = iostaterror, status="replace")
                 do k=1,numberoflines
                         if (index(dictentry(k),"\line") == 1) then
+                                ! Interesting note here:
+                                ! Plover glitches up unless this CR is 10.  Normally, GFORTRAN detects the operating system and
+                                ! outputs the appropriate CRs - windows uses 13&10.  Since this is a manual CR it does not agree
+                                ! with the automatic CRs and this can cause some weird issues when opened in some windows text
+                                ! editors.
+                                ! TODO Instead of outputing non-standard RTF, let's try outputing a JSON dictionary for plover
+                                ! instead.
                                 dictentry(k) = "{^"//achar(10)//"^}{-|}"
                         end if
                 end do
