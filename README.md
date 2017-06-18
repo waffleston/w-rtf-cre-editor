@@ -9,30 +9,18 @@ It's a lightweight RTF/CRE dictionary editor, aiming to be as easy to use as pos
 (Windows and GNU/Linux)  
 It's currently a terminal-only program, but I'm working on an Electron based wrapper for it.
 ## Todo:
-* [x] Terminal
-  * [x] REPL dictionary editing.
-    * [ ] Color REPL?
-  * [X] CLI arguments to edit dictionary without REPL.
-* [x] Dictionary Editing
-  * [x] Search
-  * [x] Add, delete, replace (singular)
+* [x] Dictionary Editing (Cont.)
   * [ ] Global/multi replace
-  * [x] Duplicate entry resolver  
-    * [x] *(TODO tree compressed)*
-    <!--
-    * [x] Find duplicate entries
-    * [x] Automatic double duplicate remover
-    -->
-  * [ ] Maintain metadata
-  * [ ] Write metadata
-  * [x] Entry validation
-    * [x] *(TODO tree compressed)*
-    <!--
-    * [x] Check if strokes contain illegal characters
-    * [x] Check if strokes are mechanically possible
-    -->
-* [ ] Create backup dictionary.
+* [ ] Metadata
+  * [x] Header
+    * [x] Maintain it.
+    * [x] Replace system text.
+    * [ ] Read modified keyboard arrangement?
+    * [ ] Dates
+* [x] Create backup dictionary.
+  * [x] `to` command.
 * [ ] Create alternate dictionaries targeting different standards of compliance.
 * [ ] TUI?
+  * [ ] Colors in terminal
 * [ ] GUI
   * [ ] Electron
