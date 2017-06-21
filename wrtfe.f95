@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.41
+! w-rtf-cre-editor v0.0.43
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38) :: corev = "w-rtf-cre-editor v0.0.41 (2017-jun-15)"
+        character (len=38) :: corev = "w-rtf-cre-editor v0.0.43 (2017-jun-20)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -28,7 +28,9 @@ module universal
         contains
 
         function finder(collection,word,errlog) RESULT(resultant)
-                ! Returns an array of all entries matching the search word.
+                ! Normal operation returns an array of all entries containing the search word.
+                ! `errlog` argument of "match" returns all entries with the search word as a stroke.  This is mainly to present
+                ! entries that may exist based on a full stroke provided.
                 implicit none
 
                 character(len=maxCLen), dimension(maxDSize), intent(in) :: collection
@@ -39,18 +41,25 @@ module universal
                 
                 integer :: l ! loop variable
                 integer :: indexofword
+                character :: endchar
                 logical :: entryfound
 
                 resultant = ""
                 entryfound = .false.
-                errlog = ""
+                ! errlog = ""
 
                 do l=1,numberoflines
         
                         indexofword = index(collection(l), trim(word))
-                        if (indexofword > 0) then
+                        if (indexofword > 0 .and. errlog /= "match") then
                                 resultant(l) = collection(l)
                                 entryfound = .true.
+                        else if (indexofword == 1) then
+                                endchar = collection(l)(len(trim(word))+1:len(trim(word))+1)
+                                if (endchar == " " .or. endchar == "/") then
+                                        resultant(l) = collection(l)
+                                        entryfound = .true.
+                                end if
                         else
                                 resultant(l) = ""
                         end if
@@ -58,6 +67,8 @@ module universal
 
                 if (entryfound .eqv. .false.) then
                         errlog = "No entries matched search criteria."
+                else
+                        errlog = ""
                 end if
                 return
         end function finder
@@ -488,6 +499,13 @@ module terminal
                                         & "] with [", trim(dictsteno(dswap)), " ", trim(atrans), "]"
                                 dicttrans(dswap) = atrans
                         end if
+                else if (index(command,"match") == 1) then
+                        arguments = command(7:maxCLen)
+                        errlog = "match"
+                        swapspace = finder(dictsteno,arguments,errlog)
+                        if (numberoflines == 0) print*, "There are no entries in the dictionary."
+                        if (len(trim(errlog)) > 0) print*, trim(errlog)
+                        call printer(swapspace,dicttrans)
                 else if (index(command,"test") == 1) then
                         call find_duplicates(dictsteno,dicttrans)
                 else if (index(command,"count") == 1) then
@@ -502,13 +520,14 @@ module terminal
                         print *, "findt [string] - Finds [string] in the translation array."
                         print *, "fixs [number] [STROKES] - Replaces the given enrty's steno."
                         print *, "fixt [number] [string] - Replaces the given entry's translation."
+                        print *, "match [STROKES] - finds an exact or initial sequence match."
                         print *, "test - Alerts you to any duplicate entries in the dictionary."
                         print *, "count - Prints the number of entries in the dictionary."
                         print *, "to [file path] - Changes the destination for exit/save."
                         print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
                         print *, "save - Saves RTF/CRE file, then exits."
                         print *, "quit - prompt for save or cancel"
-                        print *, "cancel = exits without saving."
+                        print *, "cancel - exits without saving."
                 else if (index(command,"plover") > 0) then
                         ploverfix = .true.
                 else
