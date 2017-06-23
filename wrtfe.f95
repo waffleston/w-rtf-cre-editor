@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.43
+! w-rtf-cre-editor v0.0.44
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38) :: corev = "w-rtf-cre-editor v0.0.43 (2017-jun-20)"
+        character (len=38) :: corev = "w-rtf-cre-editor v0.0.44 (2017-jun-22)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -51,17 +51,9 @@ module universal
                 do l=1,numberoflines
         
                         indexofword = index(collection(l), trim(word))
-                        if (indexofword > 0 .and. errlog /= "match") then
+                        if (indexofword > 0) then
                                 resultant(l) = collection(l)
                                 entryfound = .true.
-                        else if (indexofword == 1) then
-                                endchar = collection(l)(len(trim(word))+1:len(trim(word))+1)
-                                if (endchar == " " .or. endchar == "/") then
-                                        resultant(l) = collection(l)
-                                        entryfound = .true.
-                                end if
-                        else
-                                resultant(l) = ""
                         end if
                 end do
 
@@ -72,6 +64,35 @@ module universal
                 end if
                 return
         end function finder
+
+        function match(dictsteno,dicttrans,stroke) RESULT(resultant)
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: dictsteno
+                character(len=maxCLen), dimension(maxDSize), intent(in) :: dicttrans
+                character(len=maxCLen), intent(in) :: stroke
+
+                character(len=maxCLen) :: resultant
+                character(len=maxCLen) :: swp ! Temporary storage of translation.
+                integer :: numberof
+
+                resultant = ""
+                swp = ""
+                numberof = 1
+
+                do l=1,numberoflines
+                        if (index(dictsteno(l),stroke) == 1) then
+                                ! just `stroke` so that we don't get any trailing characters.
+                                swp = dicttrans(l)
+                        else if (index(dictsteno(l),trim(stroke)//"/") == 1) then
+                                ! `trim(stroke)` so that we get all chars after it.
+                                numberof = numberof + 1
+                        end if
+                end do
+
+                write(resultant,*) numberof-1
+                resultant = trim(swp)//achar(10)//trim(resultant)//" possible successive entries"
+
+                return
+        end function match
 
         subroutine saver(dictsteno,dicttrans,filenumber,creheader)
                 ! Writes the steno and translations to the provided file number.
@@ -444,13 +465,13 @@ module terminal
                         !print *, command
                         swapspace = finder(dictsteno,arguments,errlog)
                         if (numberoflines == 0) print*, "There are no entries in the dictionary."
-                        if (len(trim(errlog)) > 0) print*, trim(errlog)
+                        if (len(trim(errlog)) > 12) print*, trim(errlog)
                         call printer(swapspace,dicttrans)
                 else if (index(command,"findt") == 1) then
                         arguments = command(7:maxCLen)
                         swapspace = finder(dicttrans,arguments,errlog)
                         if (numberoflines == 0) print*, "There are no entries in the dictionary."
-                        if (len(trim(errlog)) > 0) print*, trim(errlog)
+                        if (len(trim(errlog)) > 12) print*, trim(errlog)
                         call printer(dictsteno,swapspace)
                 else if (index(command,"del") == 1) then
                         arguments = command(5:maxCLen)
@@ -469,19 +490,23 @@ module terminal
                         arguments = command(5:maxCLen)
                         asteno = arguments(1:index(arguments," ")-1)
                         atrans = arguments(index(arguments," ")+1:maxCLen)
-                        numberoflines = numberoflines + 1
-                        dictsteno(numberoflines) = asteno
-                        dicttrans(numberoflines) = atrans
-                        errlog = steno_validation(asteno)
+                        if (atrans /= "") then
+                                numberoflines = numberoflines + 1
+                                dictsteno(numberoflines) = asteno
+                                dicttrans(numberoflines) = atrans
+                                errlog = steno_validation(asteno)
+                                print *, "Added entry", numberoflines, ":", trim(dictsteno(numberoflines)), " ",&
+                                        &trim(dicttrans(numberoflines))
+                        else
+                                errlog = "Cancelled add: translation not provided."
+                        end if
                         
-                        print *, "Added entry", numberoflines, ":", trim(dictsteno(numberoflines)), " ",&
-                                &trim(dicttrans(numberoflines))
                         print *, trim(errlog) !Error log for validation.
                 else if (index(command,"fixs") == 1) then
                         arguments = command(6:maxCLen)
                         asteno = arguments(index(arguments," ")+1:maxCLen)
                         read(arguments(1:index(arguments," ")-1),*,iostat=iostaterr) dswap
-                        if (iostaterr > 0 .or. dswap > numberoflines) then
+                        if (iostaterr > 0 .or. dswap > numberoflines .or. len(trim(arguments)) == 0) then
                                 print *, "No valid entry number was provided."
                         else
                                 print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap)),&
@@ -492,7 +517,7 @@ module terminal
                         arguments = command(6:maxCLen)
                         atrans = arguments(index(arguments," ")+1:maxCLen)
                         read(arguments(1:index(arguments," ")-1),*,iostat=iostaterr) dswap
-                        if (iostaterr > 0 .or. dswap > numberoflines) then
+                        if (iostaterr > 0 .or. dswap > numberoflines .or. len(trim(arguments)) == 0) then
                                 print *, "No valid entry number was provided."
                         else
                                 print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap)),&
@@ -501,11 +526,7 @@ module terminal
                         end if
                 else if (index(command,"match") == 1) then
                         arguments = command(7:maxCLen)
-                        errlog = "match"
-                        swapspace = finder(dictsteno,arguments,errlog)
-                        if (numberoflines == 0) print*, "There are no entries in the dictionary."
-                        if (len(trim(errlog)) > 0) print*, trim(errlog)
-                        call printer(swapspace,dicttrans)
+                        print *, trim(match(dictsteno,dicttrans,arguments))
                 else if (index(command,"test") == 1) then
                         call find_duplicates(dictsteno,dicttrans)
                 else if (index(command,"count") == 1) then
@@ -520,7 +541,7 @@ module terminal
                         print *, "findt [string] - Finds [string] in the translation array."
                         print *, "fixs [number] [STROKES] - Replaces the given enrty's steno."
                         print *, "fixt [number] [string] - Replaces the given entry's translation."
-                        print *, "match [STROKES] - finds an exact or initial sequence match."
+                        print *, "match [STROKES] - Returns translation of direct match, and number of further translations."
                         print *, "test - Alerts you to any duplicate entries in the dictionary."
                         print *, "count - Prints the number of entries in the dictionary."
                         print *, "to [file path] - Changes the destination for exit/save."
@@ -696,6 +717,9 @@ module terminal
                 end do
                 return
         end function indexarr
+
+        subroutine printform()
+        end subroutine printform
 
 end module terminal
 
