@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.44
+! w-rtf-cre-editor v0.0.45
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38) :: corev = "w-rtf-cre-editor v0.0.44 (2017-jun-22)"
+        character (len=38) :: corev = "w-rtf-cre-editor v0.0.45 (2017-jun-22)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -463,6 +463,7 @@ module terminal
                 if (index(command,"finds") == 1) then
                         arguments = command(7:maxCLen)
                         !print *, command
+                        if (arguments(1:1) == "'") arguments = arguments(2:maxCLen)
                         swapspace = finder(dictsteno,arguments,errlog)
                         if (numberoflines == 0) print*, "There are no entries in the dictionary."
                         if (len(trim(errlog)) > 12) print*, trim(errlog)
@@ -526,6 +527,7 @@ module terminal
                         end if
                 else if (index(command,"match") == 1) then
                         arguments = command(7:maxCLen)
+                        if (arguments(1:1) == "'") arguments = arguments(2:maxCLen)
                         print *, trim(match(dictsteno,dicttrans,arguments))
                 else if (index(command,"test") == 1) then
                         call find_duplicates(dictsteno,dicttrans)
@@ -885,7 +887,7 @@ program waffleRTFEditor
         call all_arguments(arg,dictionaryfile)
         ! Get all text after the filename.
         if (len(trim(arg)) > 0) then
-                !print *, arg
+                ! print *, arg
                 call perform(dictsteno,dictentry,ploverfix,arg)
         else
                 ! REPL loop, exiting the subroutine means quit has been called.
