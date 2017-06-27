@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.45
+! w-rtf-cre-editor v0.0.46
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38) :: corev = "w-rtf-cre-editor v0.0.45 (2017-jun-22)"
+        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.46 (2017-jun-26)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -392,7 +392,13 @@ module universal
 end module universal
 module terminal
         ! REPL IO & CLI access, subroutines should be terminal specific - TUI, GUI implementations in another module.
+
         use universal
+
+        !---------------------------------------------------------------------------------------------------------------------------
+        ! Subroutines
+        !---------------------------------------------------------------------------------------------------------------------------
+        
         contains
 
         subroutine repl(dictsteno,dicttrans,ploverfix)
@@ -505,6 +511,7 @@ module terminal
                         print *, trim(errlog) !Error log for validation.
                 else if (index(command,"fixs") == 1) then
                         arguments = command(6:maxCLen)
+                        if (arguments(1:1) == "'") arguments = arguments(2:maxCLen)
                         asteno = arguments(index(arguments," ")+1:maxCLen)
                         read(arguments(1:index(arguments," ")-1),*,iostat=iostaterr) dswap
                         if (iostaterr > 0 .or. dswap > numberoflines .or. len(trim(arguments)) == 0) then
@@ -746,11 +753,6 @@ program waffleRTFEditor
 
         logical :: isentry
 
-        character (len=78) :: introduction ! 320 char list.
-        character (len=maxCLen) :: headertext !Name of program
-
-        character (len=1) :: esc ! escape character
-
         integer :: lengthofentry
         integer :: lengthofsteno
 
@@ -778,11 +780,6 @@ program waffleRTFEditor
         dictsteno = ""
 
         isentry = .false.
-
-        introduction = ""
-        headertext = "Waffle RTF/CRE Editor"
-
-        esc = achar(27)
 
         lengthofentry = 0
         lengthofsteno = 0
@@ -823,26 +820,25 @@ program waffleRTFEditor
                         print *, " -v Displays version number."
                         stop
                 case default
-                        dictionaryfile = trim(arg) ! Dictionary filename acquired, proceed.
-                        if (index(dictionaryfile,".rtf") > 0) then
-                                dictionaryfile = dictionaryfile(1:index(dictionaryfile,".rtf")+4)
-                        else if (index(dictionaryfile,".RTF") > 0) then
-                                dictionaryfile = dictionaryfile(1:index(dictionaryfile,".RTF")+4)
-                        else
-                                print *, trim(dictionaryfile)
-                                print *, "[file extension] Your file does not appear to be an rtf/cre dictionary."
+                        ! Temporarily use dictionaryfile as the extension validator.
+                        dictionaryfile = arg(len(trim(arg))-3:len(trim(arg)))
+                        if ((dictionaryfile /= ".rtf" .and. dictionaryfile /= ".RTF") .or. len(trim(arg)) < 5) then
+                                print *, "The provided file: "//trim(arg)
+                                print *, "Your file does not appear to be an rtf/cre dictionary."
                                 stop
-                        end if
+                        end if 
+                        ! It's good, let's proceed.
+                        dictionaryfile = arg
                 end select
 
                 inquire (file=dictionaryfile, exist=dictpresent)
                 if (.not. dictpresent) then
-                        print *, "File not found."
+                        print *, "The provided file does not exist."
                         stop
                 end if
                 open(1, file=dictionaryfile, iostat = iostaterror)
                 if (iostaterror /= 0) then
-                        print *, "Fatal Error: ", iostaterror
+                        print *, "Error opening provided file: IOSTAT error ", iostaterror, "."
                         stop
                 end if
         end do
@@ -858,9 +854,11 @@ program waffleRTFEditor
                 ! to work perfectly aside from the odd IOSTAT exit code.
                 read(1,'(a)',iostat = iostaterror) dictionarycontent(k)
                 if (iostaterror > 0) exit
-        end do
-        
-        do k=1,maxDSize
+
+                ! --
+                ! TODO make sure this loop merge did not cause any problems.
+                ! --
+
                 ! Splits dictionarycontent into two seperate arrays - but only if the values exist.
                 isentry = (index(dictionarycontent(k),"{\*\cxs ") == 1)
                 if (isentry .and. index(dictionarycontent(k),"}") > 6) then
