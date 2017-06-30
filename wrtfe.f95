@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.46
+! w-rtf-cre-editor v0.0.48
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.46 (2017-jun-26)"
+        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.48 (2017-jun-30)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -79,7 +79,7 @@ module universal
                 numberof = 1
 
                 do l=1,numberoflines
-                        if (index(dictsteno(l),stroke) == 1) then
+                        if (dictsteno(l) == stroke) then
                                 ! just `stroke` so that we don't get any trailing characters.
                                 swp = dicttrans(l)
                         else if (index(dictsteno(l),trim(stroke)//"/") == 1) then
@@ -753,7 +753,6 @@ program waffleRTFEditor
 
         logical :: isentry
 
-        integer :: lengthofentry
         integer :: lengthofsteno
 
         logical :: ploverfix ! used as flag for whether or not to create a plover-specific copy.
@@ -774,14 +773,14 @@ program waffleRTFEditor
         dictpresent = .false.
         iostaterror = 0
 
-        ! Does this fill the entire array with ""?
-        dictionarycontent = ""
-        dictentry = ""
-        dictsteno = ""
+        ! Array initialization takes a VERY long time...
+        ! We'll just assume the indices that matter get initialized during execution.
+        ! dictionarycontent = ""
+        ! dictentry = ""
+        ! dictsteno = ""
 
         isentry = .false.
 
-        lengthofentry = 0
         lengthofsteno = 0
 
         ploverfix = .false.
@@ -847,6 +846,7 @@ program waffleRTFEditor
         ! Execution - Read dictionary and split into two arrays.
         !---------------------------------------------------------------------------------------------------------------------------
 
+        
         do k=1,maxDSize
                 ! Reads each line into an array, until an exception is thrown.
                 ! I'd set it up to alert the user if it's not an EOF error, but I haven't been able to get a consistent value for
@@ -855,17 +855,12 @@ program waffleRTFEditor
                 read(1,'(a)',iostat = iostaterror) dictionarycontent(k)
                 if (iostaterror > 0) exit
 
-                ! --
-                ! TODO make sure this loop merge did not cause any problems.
-                ! --
-
                 ! Splits dictionarycontent into two seperate arrays - but only if the values exist.
                 isentry = (index(dictionarycontent(k),"{\*\cxs ") == 1)
-                if (isentry .and. index(dictionarycontent(k),"}") > 6) then
-                        lengthofentry = len(trim(dictionarycontent(k)))
+                if (isentry .and. index(dictionarycontent(k),"}") > 9) then
                         lengthofsteno = index(dictionarycontent(k),"}")
                         dictsteno(k-creheaderrows) = dictionarycontent(k)(9:lengthofsteno-1)
-                        dictentry(k-creheaderrows) = dictionarycontent(k)(lengthofsteno+1:lengthofentry)
+                        dictentry(k-creheaderrows) = dictionarycontent(k)(lengthofsteno+1:maxCLen)
 
                         ! We need to be aware of possible metadata and how this could affect the number of entries.
                         ! This is a better solution that the previous one, but is still restricted to only correcting "on open"
@@ -876,6 +871,7 @@ program waffleRTFEditor
                         creheaderrows = creheaderrows + 1
                 end if
         end do
+        ! This removes the trailing achar(10).
         creheader = creheader(1:len(trim(creheader))-1)
 
         !---------------------------------------------------------------------------------------------------------------------------
