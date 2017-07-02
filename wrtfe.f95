@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.48
+! w-rtf-cre-editor v0.0.49
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.48 (2017-jun-30)"
+        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.49 (2017-jul-02)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -394,6 +394,7 @@ module terminal
         ! REPL IO & CLI access, subroutines should be terminal specific - TUI, GUI implementations in another module.
 
         use universal
+        use ansicolors
 
         !---------------------------------------------------------------------------------------------------------------------------
         ! Subroutines
@@ -412,7 +413,7 @@ module terminal
                 
                 command = ""
 
-                print *, "Welcome to the command REPL, type help for command list."
+                print *, "Welcome to the command REPL, type"//c_yellow//" help "//c_reset//"for command list."
                 print *, "All metadata will be lost/replaced."
                 print *, "NO CHANGES WILL BE SAVED UNTIL YOU QUIT."
                 
@@ -483,10 +484,13 @@ module terminal
                 else if (index(command,"del") == 1) then
                         arguments = command(5:maxCLen)
                         read(arguments,*,iostat=iostaterr) dswap
-                        if (iostaterr > 0 .or. dswap > numberoflines) then
-                                print *, "No valid entry number was provided."
+                        if (iostaterr > 0 .or. dswap > numberoflines .or. dswap == 0) then
+                                print *, c_red//"No valid entry number was provided."//c_reset
                         else
-                                print *, "Deleting entry ", dswap, ": ", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap))
+                                print *, c_yellow//"Deleted entry:"
+                                print '(a,I12,a,a,a,a)', &
+                                        &c_red, dswap, " "//c_cyan, trim(dictsteno(dswap)), &
+                                        & c_red//" -> "//c_reset, trim(dicttrans(dswap))
                                 dictsteno(dswap) = ""
                                 dicttrans(dswap) = ""
                         end if
@@ -502,23 +506,32 @@ module terminal
                                 dictsteno(numberoflines) = asteno
                                 dicttrans(numberoflines) = atrans
                                 errlog = steno_validation(asteno)
-                                print *, "Added entry", numberoflines, ":", trim(dictsteno(numberoflines)), " ",&
-                                        &trim(dicttrans(numberoflines))
+                                print *, "Added entry:"
+                                print '(a,I12,a,a,a,a)', &
+                                        &c_green, numberoflines, " "//c_cyan, trim(dictsteno(numberoflines)), &
+                                        & c_green//" -> "//c_reset, trim(dicttrans(numberoflines))
                         else
-                                errlog = "Cancelled add: translation not provided."
+                                errlog = c_red//"Cancelled add: translation not provided."//c_reset
                         end if
                         
-                        print *, trim(errlog) !Error log for validation.
+                        print *, c_yellow//trim(errlog)//c_reset !Error log for validation.
                 else if (index(command,"fixs") == 1) then
                         arguments = command(6:maxCLen)
                         if (arguments(1:1) == "'") arguments = arguments(2:maxCLen)
                         asteno = arguments(index(arguments," ")+1:maxCLen)
                         read(arguments(1:index(arguments," ")-1),*,iostat=iostaterr) dswap
                         if (iostaterr > 0 .or. dswap > numberoflines .or. len(trim(arguments)) == 0) then
-                                print *, "No valid entry number was provided."
+                                print *, c_red//"No valid entry number was provided."//c_reset
                         else
-                                print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap)),&
-                                        &"] with [", trim(asteno), " ", trim(dicttrans(dswap)), "]"
+                                print *, c_yellow//"Replaced entry:"//c_reset
+                                print '(a,I12,a,a,a,a)', &
+                                        &c_red, dswap, " "//c_cyan, trim(dictsteno(dswap)), &
+                                        & c_red//" -> "//c_reset, trim(dicttrans(dswap))
+                                print '(a,I12,a,a,a,a)', &
+                                        &c_green, dswap, " "//c_cyan, trim(asteno), &
+                                        & c_green//" -> "//c_reset, trim(dicttrans(dswap))
+                                !print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap)),&
+                                !        &"] with [", trim(asteno), " ", trim(dicttrans(dswap)), "]"
                                 dictsteno(dswap) = asteno
                         end if
                 else if (index(command,"fixt") == 1) then
@@ -526,10 +539,17 @@ module terminal
                         atrans = arguments(index(arguments," ")+1:maxCLen)
                         read(arguments(1:index(arguments," ")-1),*,iostat=iostaterr) dswap
                         if (iostaterr > 0 .or. dswap > numberoflines .or. len(trim(arguments)) == 0) then
-                                print *, "No valid entry number was provided."
+                                print *, c_red//"No valid entry number was provided."//c_reset
                         else
-                                print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap)),&
-                                        & "] with [", trim(dictsteno(dswap)), " ", trim(atrans), "]"
+                                print *, c_yellow//"Replaced entry:"//c_reset
+                                print '(a,I12,a,a,a,a)', &
+                                        &c_red, dswap, " "//c_cyan, trim(dictsteno(dswap)), &
+                                        & c_red//" -> "//c_reset, trim(dicttrans(dswap))
+                                print '(a,I12,a,a,a,a)', &
+                                        &c_green, dswap, " "//c_cyan, trim(dictsteno(dswap)), &
+                                        & c_green//" -> "//c_reset, trim(atrans)
+                                !print *, "Replacing Entry ", dswap, ": [", trim(dictsteno(dswap)), " ", trim(dicttrans(dswap)),&
+                                !        & "] with [", trim(dictsteno(dswap)), " ", trim(atrans), "]"
                                 dicttrans(dswap) = atrans
                         end if
                 else if (index(command,"match") == 1) then
@@ -542,22 +562,44 @@ module terminal
                         print *, numberoflines
                 else if (index(command,"to") == 1) then
                         dictionaryfile = trim(command(4:maxCLen))
+                else if (index(command,"colors") == 1) then
+                        if (len(c_reset) == 0) then
+                                call usecolors(.true.)
+                        else
+                                call usecolors(.false.)
+                        end if
                 else if (index(command,"help") > 0) then
                         print *, "Command list:"
-                        print *, "add [STROKES] [string] - Adds the entry (No spaces in steno)."
-                        print *, "del [number] - Deletes the entry from both arrays."
-                        print *, "finds [string] - Finds [string] in the steno array."
-                        print *, "findt [string] - Finds [string] in the translation array."
-                        print *, "fixs [number] [STROKES] - Replaces the given enrty's steno."
-                        print *, "fixt [number] [string] - Replaces the given entry's translation."
-                        print *, "match [STROKES] - Returns translation of direct match, and number of further translations."
-                        print *, "test - Alerts you to any duplicate entries in the dictionary."
-                        print *, "count - Prints the number of entries in the dictionary."
-                        print *, "to [file path] - Changes the destination for exit/save."
-                        print *, "plover - also saves a plover-specific (But RTF) dictionary (fixes \line)."
-                        print *, "save - Saves RTF/CRE file, then exits."
-                        print *, "quit - prompt for save or cancel"
-                        print *, "cancel - exits without saving."
+                        print *, c_yellow//"add"//c_cyan//" [STROKES] [string] "&
+                                &//c_reset//"- Adds the entry (No spaces in steno)."
+                        print *, c_yellow//"del"//c_cyan//" [number] "&
+                                &//c_reset//"- Deletes the entry from both arrays."
+                        print *, c_yellow//"finds"//c_cyan//" [string] "&
+                                &//c_reset//"- Finds [string] in the steno array."
+                        print *, c_yellow//"findt"//c_cyan//" [string] "&
+                                &//c_reset//"- Finds [string] in the translation array."
+                        print *, c_yellow//"fixs"//c_cyan//" [number] [STROKES] "&
+                                &//c_reset//"- Replaces the given enrty's steno."
+                        print *, c_yellow//"fixt"//c_cyan//" [number] [string] "&
+                                &//c_reset//"- Replaces the given entry's translation."
+                        print *, c_yellow//"match"//c_cyan//" [STROKES] "&
+                                &//c_reset//"- Returns translation of direct match, and number of further translations."
+                        print *, c_yellow//"test "&
+                                &//c_reset//"- Alerts you to any duplicate entries in the dictionary."
+                        print *, c_yellow//"count "&
+                                &//c_reset//"- Prints the number of entries in the dictionary."
+                        print *, c_yellow//"colors "&
+                                &//c_reset//"- Toggles colors on/off in REPL interface."
+                        print *, c_yellow//"to"//c_cyan//" [file path] "&
+                                &//c_reset//"- Changes the destination for exit/save."
+                        print *, c_yellow//"plover "&
+                                &//c_reset//"- also saves a plover-specific (But RTF) dictionary (fixes \line)."
+                        print *, c_yellow//"save "&
+                                &//c_reset//"- Saves RTF/CRE file, then exits."
+                        print *, c_yellow//"quit "&
+                                &//c_reset//"- prompt for save or cancel"
+                        print *, c_yellow//"cancel "&
+                                &//c_reset//"- exits without saving."
                 else if (index(command,"plover") > 0) then
                         ploverfix = .true.
                 else
@@ -584,7 +626,8 @@ module terminal
                         stenoexists = (lengthofsteno > 0)
                         transexists = (lengthoftrans > 0)
                         if (stenoexists .and. transexists) then
-                                print *, l, trim(steno(l)), " -> ", trim(trans(l))
+                                print '(a,I12,a,a,a,a)', &
+                                        &c_yellow, l, c_cyan//" ", trim(steno(l)), c_yellow//" -> "//c_reset, trim(trans(l))
                         end if
                 end do
         end subroutine
@@ -660,28 +703,36 @@ module terminal
                         ctrans = dicttrans(dentry)
 
                         ! If strokes and translation exist, it's an entry.  Then make sure it's not a duplicate.
-                        if (len(trim(csteno)) > 0 .and. len(trim(ctrans)) > 0&
-                                &.and. .not. indexarr(nopetrans,ctrans,dtrans)&
-                                &.and. .not. indexarr(nopesteno,csteno,dsteno)) then
+                        if (len(trim(csteno)) > 0 .and. len(trim(ctrans)) > 0) then
 
                                 do dtest = dentry+1,numberoflines
                                         if (csteno == dictsteno(dtest) .and. ctrans ==&
                                                 &dicttrans(dtest)) then
 
                                                 print *, "Duplicate entry detected:"
-                                                print *, dentry, " ", trim(csteno), " ", trim(ctrans)
-                                                print *, dtest, " ", trim(dictsteno(dtest)), " ", trim(dicttrans(dtest))
+                                                print '(a,I12,a,a,a,a)', &
+                                                        &c_yellow, dentry, " "//c_cyan, trim(csteno), &
+                                                        & c_yellow//" -> "//c_reset, trim(ctrans)
+                                                print '(a,I12,a,a,a,a)', &
+                                                        &c_red, dtest, " "//c_cyan, trim(dictsteno(dtest)), &
+                                                        & c_red//" -> "//c_reset, trim(dicttrans(dtest))
+                                                !print *, dentry, " ", trim(csteno), " ", trim(ctrans)
+                                                !print *, dtest, " ", trim(dictsteno(dtest)), " ", trim(dicttrans(dtest))
                                                 dictsteno(dtest) = ""
                                                 dicttrans(dtest) = ""
-                                                print *, "Second entry deleted."
+                                                print *, c_yellow//"Second entry deleted."//c_reset
 
-                                        else if (csteno == dictsteno(dtest)) then
+                                        else if (csteno == dictsteno(dtest)&
+                                &.and. .not. indexarr(nopetrans,ctrans,dtrans)&
+                                &.and. .not. indexarr(nopesteno,csteno,dsteno)) then
                                                 write(tempchar, "(I0)") dtest
 
                                                 osteno = trim(osteno)//trim(tempchar)//", "
                                                 nsteno = nsteno + 1
 
-                                        else if (ctrans == dicttrans(dtest)) then
+                                        else if (ctrans == dicttrans(dtest)&
+                                &.and. .not. indexarr(nopetrans,ctrans,dtrans)&
+                                &.and. .not. indexarr(nopesteno,csteno,dsteno)) then
                                                 write(tempchar, "(I0)") dtest
 
                                                 otrans = trim(otrans)//trim(tempchar)//", "
@@ -732,9 +783,72 @@ module terminal
 
 end module terminal
 
+module ansicolors
+        !---------------------------------------------------------------------------------------------------------------------------
+        ! Definition - "Globals"
+        !---------------------------------------------------------------------------------------------------------------------------
+
+        character(len=:), allocatable :: c_reset, c_red, c_green, c_yellow, c_blue, c_magenta, c_cyan, c_bright_white
+
+        !---------------------------------------------------------------------------------------------------------------------------
+        ! Subroutines
+        !---------------------------------------------------------------------------------------------------------------------------
+
+        contains
+
+        subroutine platformcolors()
+                ! [Windows]
+                ! Only windows 10 Creators Update supports colors.  Not sure how to detect that.
+                ! [Linux]
+                ! It's probably safe to assume all POSIX compatible terminals allow ANSI escape codes.
+                logical :: isWindows
+                inquire (file="C:/", exist=isWindows)
+                call usecolors(.not. isWindows)
+        end subroutine platformcolors
+
+        subroutine usecolors(toggle)
+                ! If colors were previously on and now to be turned off, be sure to print c_reset before calling this.
+                logical, intent(in) :: toggle
+                character :: esc
+                esc = achar(27)
+
+                if (allocated(c_reset)) deallocate(c_reset)
+                if (allocated(c_red)) deallocate(c_red)
+                if (allocated(c_green)) deallocate(c_green)
+                if (allocated(c_yellow)) deallocate(c_yellow)
+                if (allocated(c_blue)) deallocate(c_blue)
+                if (allocated(c_magenta)) deallocate(c_magenta)
+                if (allocated(c_cyan)) deallocate(c_cyan)
+                if (allocated(c_bright_white)) deallocate(c_bright_white)
+
+                if (toggle) then
+                        c_reset = esc//"[0m"
+                        c_red = esc//"[91m"
+                        c_green = esc//"[92m"
+                        c_yellow = esc//"[93m"
+                        c_blue = esc//"[94m"
+                        c_magenta = esc//"[95m"
+                        c_cyan = esc//"[96m"
+                        c_bright_white = esc//"[97m"
+                else
+                        c_reset = ""
+                        c_red = ""
+                        c_green = ""
+                        c_yellow = ""
+                        c_blue = ""
+                        c_magenta = ""
+                        c_cyan = ""
+                        c_bright_white = ""
+                end if
+        end subroutine usecolors
+
+
+end module ansicolors
+
 program waffleRTFEditor
         use universal
         use terminal
+        use ansicolors
         implicit none
 
         !---------------------------------------------------------------------------------------------------------------------------
@@ -882,9 +996,11 @@ program waffleRTFEditor
         ! Get all text after the filename.
         if (len(trim(arg)) > 0) then
                 ! print *, arg
+                call usecolors(.false.)
                 call perform(dictsteno,dictentry,ploverfix,arg)
         else
                 ! REPL loop, exiting the subroutine means quit has been called.
+                call platformcolors()
                 call repl(dictsteno,dictentry,ploverfix)
         end if
 
