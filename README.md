@@ -30,8 +30,8 @@ It's currently a terminal-only program, but I'm working on an Electron based wra
     `Currently, all metadata is kept as long as it's inline.`
     * [ ] Hide hidden/ignored steno groups
 * [ ] Provide as a library?
-* [ ] TUI?
-  * [ ] Colors in terminal
+* [x] TUI?
+  * [x] Colors in terminal
 * [ ] GUI
   * [ ] Electron
 * [ ] Create alternate dictionaries targeting different standards of compliance.
