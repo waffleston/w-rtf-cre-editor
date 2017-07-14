@@ -26,12 +26,9 @@ It's currently a terminal-only program, but I'm working on an Electron based wra
     * [ ] Dates  
     `RTF/CRE spec says this is only for transcripts/notes.  Should it be supported anyways?`
   * [x] Entry
-    * [ ] Multi-line entries  
+    * [x] Multi-line entries  
     `Currently, all metadata is kept as long as it's inline.`
-    * [ ] Hide hidden/ignored steno groups
 * [ ] Provide as a library?
-* [x] TUI?
-  * [x] Colors in terminal
 * [ ] GUI
   * [ ] Electron
 * [ ] Create alternate dictionaries targeting different standards of compliance.
