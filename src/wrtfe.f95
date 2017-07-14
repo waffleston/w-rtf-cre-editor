@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.49
+! w-rtf-cre-editor v0.0.54
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.49 (2017-jul-02)"
+        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.54 (2017-jul-13)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -156,6 +156,16 @@ module universal
                         transexists = (lengthoftrans > 0)
                         
                         if (stenoexists .and. transexists) then
+                                do
+                                        if (index(thistrans,"{\cxwrtfecr}") /= 0) then
+                                                thistrans(index(thistrans,"{\cxwrtfecr}"):index(thistrans,"{\cxwrtfecr}")) = &
+                                                        &achar(10)
+                                                thistrans = thistrans(1:index(thistrans,"\cxwrtfecr}")-1)&
+                                                        &//thistrans(index(thistrans,"\cxwrtfecr}")+11:maxCLen)
+                                        else
+                                                exit
+                                        end if
+                                end do
                                 write (filenumber,'(a)') '{\*\cxs '//trim(thissteno)//'}'//trim(thistrans)
                         end if
                 end do
@@ -812,6 +822,8 @@ program waffleRTFEditor
         character(len=maxCLen*5) :: creheader ! Following the CRE spec, the header metadata.
         integer :: creheaderrows ! The number of rows taken up by header metadata.
 
+        integer :: multilines
+
         !---------------------------------------------------------------------------------------------------------------------------
         ! Initialization
         !---------------------------------------------------------------------------------------------------------------------------
@@ -839,6 +851,8 @@ program waffleRTFEditor
 
         creheader = ""
         creheaderrows = 0
+
+        multilines = 0
 
         !---------------------------------------------------------------------------------------------------------------------------
         ! Globals - from universal module
@@ -911,16 +925,25 @@ program waffleRTFEditor
                 isentry = (index(dictionarycontent(k),"{\*\cxs ") == 1)
                 if (isentry .and. index(dictionarycontent(k),"}") > 9) then
                         lengthofsteno = index(dictionarycontent(k),"}")
-                        dictsteno(k-creheaderrows) = dictionarycontent(k)(9:lengthofsteno-1)
-                        dictentry(k-creheaderrows) = dictionarycontent(k)(lengthofsteno+1:maxCLen)
 
                         ! We need to be aware of possible metadata and how this could affect the number of entries.
                         ! This is a better solution that the previous one, but is still restricted to only correcting "on open"
                         ! count issues.  REMEMBER that the repl ADDS 1 to numberoflines before adding an entry.
-                        numberoflines = k-creheaderrows
+                        numberoflines = k-creheaderrows-multilines
+
+                        dictsteno(numberoflines) = dictionarycontent(k)(9:lengthofsteno-1)
+                        dictentry(numberoflines) = dictionarycontent(k)(lengthofsteno+1:maxCLen)
+
+                        
                 else if (numberoflines == 0) then
                         creheader = trim(creheader)//trim(dictionarycontent(k))//achar(10)
                         creheaderrows = creheaderrows + 1
+                else if (index(dictionarycontent(k),"}") /= 1 .and. ichar(dictionarycontent(k)(1:1)) /= 0) then
+                        ! I'm assuming the second line is a translation because splitting the steno group makes no sense.
+                        dictentry(numberoflines+creheaderrows-1) = &
+                                &trim(dictentry(numberoflines+creheaderrows-1))//"{\cxwrtfecr}"//trim(dictionarycontent(k))
+                        ! I suppose maintaining the return would be nice, so let's do that.
+                        multilines = multilines + 1
                 end if
         end do
         ! This removes the trailing achar(10).

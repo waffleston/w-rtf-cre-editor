@@ -5,7 +5,7 @@ rem should be installed in bash.
 echo on
 cd generated
 gfortran -c ../ansicolors.f08
-gfortran -o ../../build/wrtfe.exe ansicolors.o ../../wrtfe.f95 -static
+gfortran -o ../../build/wrtfe.exe ansicolors.o ../wrtfe.f95 -static
 bash -c "gfortran -c ../ansicolors.f08"
-bash -c "gfortran -o ../../build/wrtfe ansicolors.o ../../wrtfe.f95 -static"
+bash -c "gfortran -o ../../build/wrtfe ansicolors.o ../wrtfe.f95 -static"
 cd ..
