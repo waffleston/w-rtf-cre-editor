@@ -7,10 +7,10 @@ It's a lightweight RTF/CRE dictionary editor, aiming to be as easy to use as pos
 * Dictionary searches (both strokes and translations)
 ## [Download](build/)
 (Windows and GNU/Linux)  
-It's currently a terminal-only program, but I'm working on an Electron based wrapper for it.
+It's currently a terminal-only program, but I'm working on some ways to bring it into the "modern age".
 
 -----
-[License](LICENSE) | [Code of Conduct](CODE_OF_CONDUCT.md)
+[License](LICENSE) | [Contributing](CONTRIBUTING.md) | [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ---
 
@@ -25,10 +25,9 @@ It's currently a terminal-only program, but I'm working on an Electron based wra
     `RTF/CRE spec does not have this, is it Stenograph specific?`
     * [ ] Dates  
     `RTF/CRE spec says this is only for transcripts/notes.  Should it be supported anyways?`
-  * [x] Entry
-    * [x] Multi-line entries  
-    `Currently, all metadata is kept as long as it's inline.`
 * [ ] Provide as a library?
 * [ ] GUI
-  * [ ] Electron
+  * [ ] Electron?
+  * [ ] ncurses/blessed?
+  * [ ] GTK/Qt?
 * [ ] Create alternate dictionaries targeting different standards of compliance.
