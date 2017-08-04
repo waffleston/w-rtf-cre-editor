@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.54
+! w-rtf-cre-editor v0.0.58
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.54 (2017-jul-13)"
+        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.58 (2017-aug-04)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -263,7 +263,7 @@ module universal
                 ! [x] Cannot follow K:
                 !     ST FBLGDZ
                 ! [x] Cannot follow P:
-                !     STK F
+                !     TK F
                 ! [x] Cannot follow W:
                 !     STKP FBLGDZ
                 ! [x] Cannot follow H:
@@ -293,14 +293,14 @@ module universal
                         end if
 
                         if (k_ == "K" .or. k_ == "P" .or. k_ == "W" .or. k_ == "H") then
-                                if (m_ == "S" .or. m_ == "T" .or. m_ == "K" .or. m_ == "F") then
+                                if (m_ == "T" .or. m_ == "K" .or. m_ == "F") then
                                         mech_validation = swp
                                         exit
                                 end if
                         end if
 
                         if (k_ == "K" .or. k_ == "W" .or. k_ == "H") then
-                                if (m_ == "B" .or. m_ == "L" .or. m_ == "G" .or. m_ == "D" .or. m_ == "Z") then
+                                if (m_ == "B" .or. m_ == "L" .or. m_ == "G" .or. m_ == "D" .or. m_ == "Z" .or. m_ == "S") then
                                         mech_validation = swp
                                         exit
                                 end if
