@@ -1,4 +1,4 @@
-! w-rtf-cre-editor v0.0.58
+! w-rtf-cre-editor v0.0.59
 ! (c) 2017 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.58 (2017-aug-04)"
+        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.59 (2017-sep-04)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
@@ -64,6 +64,30 @@ module universal
                 end if
                 return
         end function finder
+
+        function global_replace(collection, find, replace) RESULT(resultant)
+                implicit none
+                character(len=maxCLen), dimension(maxDSize), intent(inout) :: collection
+                character(len=*), intent(in) :: find
+                character(len=*), intent(in) :: replace
+
+                character(len=maxCLen) :: resultant
+                integer :: l
+                integer :: numreplaced
+
+                numreplaced = 0
+
+                do l=1,numberoflines
+                        if (collection(l) == find) then
+                                collection(l) = replace
+                                numreplaced = numreplaced + 1
+                        end if
+                end do
+
+                write(resultant,*) numreplaced
+                resultant = trim(resultant)//" entries replaced."
+                return
+        end function global_replace
 
         function match(dictsteno,dicttrans,stroke) RESULT(resultant)
                 character(len=maxCLen), dimension(maxDSize), intent(in) :: dictsteno
@@ -578,6 +602,24 @@ module terminal
                         else
                                 call usecolors(.false.)
                         end if
+                else if (index(command,"greplaces") > 0) then
+                        arguments = command(11:maxCLen)
+                        errlog = global_replace(dictsteno,arguments(1:index(arguments," ")-1),&
+                                &arguments(index(arguments," ")+1:maxCLen))
+                        print *, c_red//arguments(1:index(arguments," ")-1)
+                        print *, c_green//trim(arguments(index(arguments," ")+1:maxCLen))//c_reset
+                        if (len_trim(errlog) > 1) then
+                                write (*,'(a)') trim(errlog)
+                        end if
+                else if (index(command,"greplacet") > 0) then
+                        arguments = command(11:maxCLen)
+                        errlog = global_replace(dicttrans,arguments(1:index(arguments," ")-1),&
+                                &arguments(index(arguments," ")+1:maxCLen))
+                        print *, c_red//arguments(1:index(arguments," ")-1)
+                        print *, c_green//trim(arguments(index(arguments," ")+1:maxCLen))//c_reset
+                        if (len_trim(errlog) > 1) then
+                                write (*,'(a)') trim(errlog)
+                        end if
                 else if (index(command,"help") > 0) then
                         print *, "Command list:"
                         print *, c_yellow//"add"//c_cyan//" [STROKES] [string] "&
@@ -594,6 +636,10 @@ module terminal
                                 &//c_reset//"- Replaces the given entry's translation."
                         print *, c_yellow//"match"//c_cyan//" [STROKES] "&
                                 &//c_reset//"- Returns translation of direct match, and number of further translations."
+                        print *, c_yellow//"greplaces"//c_cyan//" [STROKES] [STROKES]"&
+                                &//c_reset//"- Replaces (exact match) first stroke with second across all entries."
+                        print *, c_yellow//"greplacet"//c_cyan//" [string] [string]"&
+                                &//c_reset//"- Replaces (exact match) first translation with second across all entries."
                         print *, c_yellow//"test "&
                                 &//c_reset//"- Alerts you to any duplicate entries in the dictionary."
                         print *, c_yellow//"count "&
