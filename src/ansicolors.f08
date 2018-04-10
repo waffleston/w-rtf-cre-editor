@@ -1,5 +1,5 @@
 ! w-ansi-colors
-! (c) 2017 Brendyn Sonntag
+! (c) 2017-2018 Brendyn Sonntag
 ! Licensed under Apache 2.0
 module ansicolors
         !---------------------------------------------------------------------------------------------------------------------------
@@ -16,7 +16,9 @@ module ansicolors
 
         subroutine platformcolors()
                 ! [Windows]
-                ! Only windows 10 Creators Update supports colors.  Not sure how to detect that.
+                ! Only windows 10 Creators Update supports colors in CMD.
+                ! TODO: Detect Windows 10, and allow colors.
+                ! Probable implementation: Execute `ver`, and read the NT version string.
                 ! [Linux]
                 ! It's probably safe to assume all POSIX compatible terminals allow ANSI escape codes.
                 logical :: isWindows

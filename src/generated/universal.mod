@@ -1,5 +1,5 @@
 GFORTRAN module version '10' created from ../wrtfe.f95
-MD5:1c26ed411ab03c41c6c2ce330bbbd624 -- If you edit this, you'll get what you deserve.
+MD5:69d18bed1a272370671722386c582de4 -- If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () () () () () () ()
 () () ())
@@ -17,7 +17,7 @@ MD5:1c26ed411ab03c41c6c2ce330bbbd624 -- If you edit this, you'll get what you de
 (2 'corev' 'universal' '' 1 ((PARAMETER UNKNOWN-INTENT UNKNOWN-PROC
 UNKNOWN IMPLICIT-SAVE 0 0) (CHARACTER 1 0 0 0 CHARACTER ((CONSTANT (
 INTEGER 4 0 0 0 INTEGER ()) 0 '38'))) 0 0 () (CONSTANT (CHARACTER 1 0 0
-0 CHARACTER (())) 0 38 'w-rtf-cre-editor v0.0.59 (2017-sep-04)') () 0 ()
+0 CHARACTER (())) 0 38 'w-rtf-cre-editor v0.0.60 (2018-apr-10)') () 0 ()
 () () 0 0)
 3 'dictionaryfile' 'universal' '' 1 ((VARIABLE UNKNOWN-INTENT
 UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0) (CHARACTER 1 0 0 0 CHARACTER ((

@@ -1,5 +1,5 @@
-! w-rtf-cre-editor v0.0.59
-! (c) 2017 Brendyn Sonntag
+! w-rtf-cre-editor v0.0.60
+! (c) 2017-2018 Brendyn Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
 
@@ -10,7 +10,7 @@ module universal
         ! Definition - "Statics"
         !---------------------------------------------------------------------------------------------------------------------------
 
-        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.59 (2017-sep-04)"
+        character (len=38), parameter :: corev = "w-rtf-cre-editor v0.0.60 (2018-apr-10)"
         integer, parameter :: maxCLen = 320
         integer, parameter :: maxDSize = 300000
 
