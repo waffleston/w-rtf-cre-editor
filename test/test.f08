@@ -1,5 +1,5 @@
 ! w-rtf-cre-editor's automated test script
-! (c) 2017 Brendyn Sonntag
+! (c) 2017 Renee Waverly Sonntag
 ! Licensed under Apache 2.0
 
 module w_std_pipes

@@ -1,5 +1,5 @@
 ! w-rtf-cre-editor v0.0.60
-! (c) 2017-2018 Brendyn Sonntag
+! (c) 2017-2018 Renee Waverly Sonntag
 ! Licensed under Apache 2.0, see LICENSE file.
 ! Maximum dictionary size: 300000 entries, each with a max length of 320 chars.
 

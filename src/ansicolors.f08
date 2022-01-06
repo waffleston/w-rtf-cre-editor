@@ -1,5 +1,5 @@
 ! w-ansi-colors
-! (c) 2017-2018 Brendyn Sonntag
+! (c) 2017-2018 Renee Waverly Sonntag
 ! Licensed under Apache 2.0
 module ansicolors
         !---------------------------------------------------------------------------------------------------------------------------
